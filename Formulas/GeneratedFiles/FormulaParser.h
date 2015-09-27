@@ -72,8 +72,8 @@ typedef union YYSTYPE
 /* Line 1676 of yacc.c  */
 #line 37 "FormulaParser.y"
 
-    int value;
-    SExpression *expression;
+    float value;
+    ASTNode *expression;
 
 
 

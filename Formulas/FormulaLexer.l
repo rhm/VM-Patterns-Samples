@@ -22,15 +22,17 @@ LPAREN      "("
 RPAREN      ")"
 PLUS        "+"
 MULTIPLY    "*"
- 
-NUMBER      [0-9]+
+
 WS          [ \r\n\t]*
  
 %%
  
 {WS}            { /* Skip blanks. */ }
-{NUMBER}        { sscanf_s(yytext, "%d", &yylval->value); return TOKEN_NUMBER; }
- 
+
+-?[0-9]+ |
+-?[0-9]+"."[0-9]* |
+-?"."[0-9]+     { sscanf_s(yytext, "%f", &yylval->value); return TOKEN_NUMBER; }
+
 {MULTIPLY}      { return TOKEN_MULTIPLY; }
 {PLUS}          { return TOKEN_PLUS; }
 {LPAREN}        { return TOKEN_LPAREN; }

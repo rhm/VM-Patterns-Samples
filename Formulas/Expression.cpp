@@ -9,60 +9,66 @@
 
 #include <stdlib.h>
 
-/**
- * @brief Allocates space for expression
- * @return The expression or NULL if not enough memory
- */
-static SExpression *allocateExpression()
+
+
+ASTNodeNonLeaf::~ASTNodeNonLeaf()
 {
-    SExpression *b = (SExpression *)malloc(sizeof(SExpression));
+	if (m_leftChild)
+	{
+		delete m_leftChild;
+	}
 
-    if (b == NULL)
-        return NULL;
-
-    b->type = eVALUE;
-    b->value = 0;
-
-    b->left = NULL;
-    b->right = NULL;
-
-    return b;
+	if (m_rightChild)
+	{
+		delete m_rightChild;
+	}
 }
 
-SExpression *createNumber(int value)
-{
-    SExpression *b = allocateExpression();
-
-    if (b == NULL)
-        return NULL;
-
-    b->type = eVALUE;
-    b->value = value;
-
-    return b;
+float ASTNodeConst::floatValue() const 
+{ 
+	assert(nodeType() == eASTNodeType::VALUE_FLOAT); 
+	return m_value.f_value; 
 }
 
-SExpression *createOperation(EOperationType type, SExpression *left, SExpression *right)
-{
-    SExpression *b = allocateExpression();
-
-    if (b == NULL)
-        return NULL;
-
-    b->type = type;
-    b->left = left;
-    b->right = right;
-
-    return b;
+const char* ASTNodeConst::nameValue() const 
+{ 
+	assert(nodeType() == eASTNodeType::VALUE_NAME); 
+	return m_value.n_value; 
 }
 
-void deleteExpression(SExpression *b)
+bool ASTNodeConst::boolValue() const 
+{ 
+	assert(nodeType() == eASTNodeType::VALUE_BOOL); 
+	return m_value.b_value;
+}
+
+
+ASTNode* createNode(eASTNodeType _nodeType, ASTNode* _leftChild, ASTNode* _rightChild)
 {
-    if (b == NULL)
-        return;
+	ASTNode* retval(nullptr);
 
-    deleteExpression(b->left);
-    deleteExpression(b->right);
+	switch (_nodeType)
+	{
+	case eASTNodeType::LOGICAL_OR:	retval = new ASTNodeLogic(_nodeType, _leftChild, _rightChild); break;
+	case eASTNodeType::LOGICAL_AND:	retval = new ASTNodeLogic(_nodeType, _leftChild, _rightChild); break;
+	case eASTNodeType::LOGICAL_NOT:	retval = new ASTNodeLogic(_nodeType, _leftChild, _rightChild); break;
 
-    free(b);
+	case eASTNodeType::COMP_EQ:		retval = new ASTNodeComp(_nodeType, _leftChild, _rightChild); break;
+	case eASTNodeType::COMP_NEQ:	retval = new ASTNodeComp(_nodeType, _leftChild, _rightChild); break;
+	case eASTNodeType::COMP_LT:		retval = new ASTNodeComp(_nodeType, _leftChild, _rightChild); break;
+	case eASTNodeType::COMP_LTEQ:	retval = new ASTNodeComp(_nodeType, _leftChild, _rightChild); break;
+	case eASTNodeType::COMP_GT:		retval = new ASTNodeComp(_nodeType, _leftChild, _rightChild); break;
+	case eASTNodeType::COMP_GTEQ:	retval = new ASTNodeComp(_nodeType, _leftChild, _rightChild); break;
+
+	case eASTNodeType::ARITH_ADD:	retval = new ASTNodeArith(_nodeType, _leftChild, _rightChild); break;
+	case eASTNodeType::ARITH_SUB:	retval = new ASTNodeArith(_nodeType, _leftChild, _rightChild); break;
+	case eASTNodeType::ARITH_MUL:	retval = new ASTNodeArith(_nodeType, _leftChild, _rightChild); break;
+	case eASTNodeType::ARITH_DIV:	retval = new ASTNodeArith(_nodeType, _leftChild, _rightChild); break;
+	case eASTNodeType::ARITH_MOD:	retval = new ASTNodeArith(_nodeType, _leftChild, _rightChild); break;
+
+	default:
+		assert(0);
+	}
+
+	return retval;
 }

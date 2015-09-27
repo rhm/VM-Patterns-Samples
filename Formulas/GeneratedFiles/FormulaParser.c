@@ -81,7 +81,7 @@
 #include "GeneratedFiles/FormulaParser.h"
 #include "GeneratedFiles/FormulaLexer.h"
 
-int yyerror(SExpression **expression, yyscan_t scanner, const char *msg) {
+int yyerror(ASTNode **expression, yyscan_t scanner, const char *msg) {
     // Add error handling routine as needed
 	return 0;
 }
@@ -149,8 +149,8 @@ typedef union YYSTYPE
 /* Line 214 of yacc.c  */
 #line 37 "FormulaParser.y"
 
-    int value;
-    SExpression *expression;
+    float value;
+    ASTNode *expression;
 
 
 
@@ -665,14 +665,14 @@ do {									  \
 #if (defined __STDC__ || defined __C99__FUNC__ \
      || defined __cplusplus || defined _MSC_VER)
 static void
-yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, SExpression **expression, yyscan_t scanner)
+yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, ASTNode **expression, yyscan_t scanner)
 #else
 static void
 yy_symbol_value_print (yyoutput, yytype, yyvaluep, expression, scanner)
     FILE *yyoutput;
     int yytype;
     YYSTYPE const * const yyvaluep;
-    SExpression **expression;
+    ASTNode **expression;
     yyscan_t scanner;
 #endif
 {
@@ -701,14 +701,14 @@ yy_symbol_value_print (yyoutput, yytype, yyvaluep, expression, scanner)
 #if (defined __STDC__ || defined __C99__FUNC__ \
      || defined __cplusplus || defined _MSC_VER)
 static void
-yy_symbol_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, SExpression **expression, yyscan_t scanner)
+yy_symbol_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, ASTNode **expression, yyscan_t scanner)
 #else
 static void
 yy_symbol_print (yyoutput, yytype, yyvaluep, expression, scanner)
     FILE *yyoutput;
     int yytype;
     YYSTYPE const * const yyvaluep;
-    SExpression **expression;
+    ASTNode **expression;
     yyscan_t scanner;
 #endif
 {
@@ -760,13 +760,13 @@ do {								\
 #if (defined __STDC__ || defined __C99__FUNC__ \
      || defined __cplusplus || defined _MSC_VER)
 static void
-yy_reduce_print (YYSTYPE *yyvsp, int yyrule, SExpression **expression, yyscan_t scanner)
+yy_reduce_print (YYSTYPE *yyvsp, int yyrule, ASTNode **expression, yyscan_t scanner)
 #else
 static void
 yy_reduce_print (yyvsp, yyrule, expression, scanner)
     YYSTYPE *yyvsp;
     int yyrule;
-    SExpression **expression;
+    ASTNode **expression;
     yyscan_t scanner;
 #endif
 {
@@ -1040,14 +1040,14 @@ yysyntax_error (char *yyresult, int yystate, int yychar)
 #if (defined __STDC__ || defined __C99__FUNC__ \
      || defined __cplusplus || defined _MSC_VER)
 static void
-yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, SExpression **expression, yyscan_t scanner)
+yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, ASTNode **expression, yyscan_t scanner)
 #else
 static void
 yydestruct (yymsg, yytype, yyvaluep, expression, scanner)
     const char *yymsg;
     int yytype;
     YYSTYPE *yyvaluep;
-    SExpression **expression;
+    ASTNode **expression;
     yyscan_t scanner;
 #endif
 {
@@ -1076,7 +1076,7 @@ int yyparse ();
 #endif
 #else /* ! YYPARSE_PARAM */
 #if defined __STDC__ || defined __cplusplus
-int yyparse (SExpression **expression, yyscan_t scanner);
+int yyparse (ASTNode **expression, yyscan_t scanner);
 #else
 int yyparse ();
 #endif
@@ -1104,11 +1104,11 @@ yyparse (YYPARSE_PARAM)
 #if (defined __STDC__ || defined __C99__FUNC__ \
      || defined __cplusplus || defined _MSC_VER)
 int
-yyparse (SExpression **expression, yyscan_t scanner)
+yyparse (ASTNode **expression, yyscan_t scanner)
 #else
 int
 yyparse (expression, scanner)
-    SExpression **expression;
+    ASTNode **expression;
     yyscan_t scanner;
 #endif
 #endif
@@ -1372,14 +1372,14 @@ yyreduce:
 
 /* Line 1455 of yacc.c  */
 #line 60 "FormulaParser.y"
-    { (yyval.expression) = createOperation( ePLUS, (yyvsp[(1) - (3)].expression), (yyvsp[(3) - (3)].expression) ); ;}
+    { (yyval.expression) = createNode( eASTNodeType::ARITH_ADD, (yyvsp[(1) - (3)].expression), (yyvsp[(3) - (3)].expression) ); ;}
     break;
 
   case 4:
 
 /* Line 1455 of yacc.c  */
 #line 61 "FormulaParser.y"
-    { (yyval.expression) = createOperation( eMULTIPLY, (yyvsp[(1) - (3)].expression), (yyvsp[(3) - (3)].expression) ); ;}
+    { (yyval.expression) = createNode( eASTNodeType::ARITH_MUL, (yyvsp[(1) - (3)].expression), (yyvsp[(3) - (3)].expression) ); ;}
     break;
 
   case 5:
@@ -1393,7 +1393,7 @@ yyreduce:
 
 /* Line 1455 of yacc.c  */
 #line 63 "FormulaParser.y"
-    { (yyval.expression) = createNumber((yyvsp[(1) - (1)].value)); ;}
+    { (yyval.expression) = new ASTNodeConst((yyvsp[(1) - (1)].value)); ;}
     break;
 
 

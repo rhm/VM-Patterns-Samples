@@ -347,7 +347,7 @@ extern int yylex \
 #undef YY_DECL
 #endif
 
-#line 40 "FormulaLexer.l"
+#line 42 "FormulaLexer.l"
 
 
 #line 354 "GeneratedFiles/FormulaLexer.h"

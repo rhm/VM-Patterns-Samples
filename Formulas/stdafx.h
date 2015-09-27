@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 #include <tchar.h>
+#include <assert.h>
 
 #define YY_NO_UNISTD_H
 

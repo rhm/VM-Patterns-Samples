@@ -10,7 +10,7 @@
 #include "GeneratedFiles/FormulaParser.h"
 #include "GeneratedFiles/FormulaLexer.h"
 
-int yyerror(SExpression **expression, yyscan_t scanner, const char *msg) {
+int yyerror(ASTNode **expression, yyscan_t scanner, const char *msg) {
     // Add error handling routine as needed
 	return 0;
 }
@@ -31,12 +31,12 @@ typedef void* yyscan_t;
  
 %define api.pure
 %lex-param   { yyscan_t scanner }
-%parse-param { SExpression **expression }
+%parse-param { ASTNode **expression }
 %parse-param { yyscan_t scanner }
 
 %union {
-    int value;
-    SExpression *expression;
+    float value;
+    ASTNode *expression;
 }
  
 %left '+' TOKEN_PLUS
@@ -57,10 +57,10 @@ input
     ;
  
 expr
-    : expr TOKEN_PLUS expr { $$ = createOperation( ePLUS, $1, $3 ); }
-    | expr TOKEN_MULTIPLY expr { $$ = createOperation( eMULTIPLY, $1, $3 ); }
+    : expr TOKEN_PLUS expr { $$ = createNode( eASTNodeType::ARITH_ADD, $1, $3 ); }
+    | expr TOKEN_MULTIPLY expr { $$ = createNode( eASTNodeType::ARITH_MUL, $1, $3 ); }
     | TOKEN_LPAREN expr TOKEN_RPAREN { $$ = $2; }
-    | TOKEN_NUMBER { $$ = createNumber($1); }
+    | TOKEN_NUMBER { $$ = new ASTNodeConst($1); }
 	;
  
 %%
