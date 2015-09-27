@@ -18,11 +18,6 @@
 %option reentrant noyywrap never-interactive nounistd
 %option bison-bridge
  
-LPAREN      "("
-RPAREN      ")"
-PLUS        "+"
-MULTIPLY    "*"
-
 WS          [ \r\n\t]*
  
 %%
@@ -31,13 +26,30 @@ WS          [ \r\n\t]*
 
 -?[0-9]+ |
 -?[0-9]+"."[0-9]* |
--?"."[0-9]+     { sscanf_s(yytext, "%f", &yylval->value); return TOKEN_NUMBER; }
+-?"."[0-9]+     { sscanf_s(yytext, "%f", &yylval->f_value); return TOKEN_NUMBER; }
 
-{MULTIPLY}      { return TOKEN_MULTIPLY; }
-{PLUS}          { return TOKEN_PLUS; }
-{LPAREN}        { return TOKEN_LPAREN; }
-{RPAREN}        { return TOKEN_RPAREN; }
-.               {  }
+\".*\"			{ return TOKEN_NAME; }
+
+[a-zA-Z]+[a-zA-Z0-9_]*	{ return TOKEN_ID; }
+
+"("				{ return TOKEN_LPAREN; }
+")"				{ return TOKEN_RPAREN; }
+"+"				{ return TOKEN_PLUS; }
+"-"				{ return TOKEN_MINUS; }
+"*"				{ return TOKEN_MUL; }
+"/"				{ return TOKEN_DIV; }
+"%"				{ return TOKEN_PERCENT; }
+"&&"			{ return TOKEN_AND; }
+"||"			{ return TOKEN_OR; }
+"!"				{ return TOKEN_NOT; }
+"="				{ return TOKEN_EQ; }
+"!="			{ return TOKEN_NEQ; }
+"<"				{ return TOKEN_LT; }
+"<="			{ return TOKEN_LTEQ; }
+">"				{ return TOKEN_GT; }
+">="			{ return TOKEN_GTEQ; }
+
+.				{ return TOKEN_ERR; }
  
 %%
  

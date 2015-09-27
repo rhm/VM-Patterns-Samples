@@ -358,8 +358,8 @@ static void yy_fatal_error (yyconst char msg[] ,yyscan_t yyscanner );
 	*yy_cp = '\0'; \
 	yyg->yy_c_buf_p = yy_cp;
 
-#define YY_NUM_RULES 10
-#define YY_END_OF_BUFFER 11
+#define YY_NUM_RULES 24
+#define YY_END_OF_BUFFER 25
 /* This struct is not used in this scanner,
    but its presence is necessary. */
 struct yy_trans_info
@@ -367,10 +367,12 @@ struct yy_trans_info
 	flex_int32_t yy_verify;
 	flex_int32_t yy_nxt;
 	};
-static yyconst flex_int16_t yy_accept[21] =
+static yyconst flex_int16_t yy_accept[40] =
     {   0,
-        1,    1,   11,    9,    1,    1,    7,    8,    5,    6,
-        9,    9,    2,    1,    0,    2,    4,    3,    3,    0
+        1,    1,   25,   23,    1,    1,   16,   23,   13,   23,
+        7,    8,   11,    9,   10,   23,   12,    2,   19,   17,
+       21,    6,   23,    1,   18,    0,    5,   14,    0,    2,
+        4,    3,   20,   22,    6,    6,   15,    3,    0
     } ;
 
 static yyconst flex_int32_t yy_ec[256] =
@@ -378,17 +380,17 @@ static yyconst flex_int32_t yy_ec[256] =
         1,    1,    1,    1,    1,    1,    1,    1,    2,    3,
         1,    1,    2,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
-        1,    2,    1,    1,    1,    1,    1,    1,    1,    4,
-        5,    6,    7,    1,    8,    9,    1,   10,   10,   10,
-       10,   10,   10,   10,   10,   10,   10,    1,    1,    1,
-        1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
-        1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
-        1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
-        1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
+        1,    2,    4,    5,    1,    1,    6,    7,    1,    8,
+        9,   10,   11,    1,   12,   13,   14,   15,   15,   15,
+       15,   15,   15,   15,   15,   15,   15,    1,    1,   16,
+       17,   18,    1,    1,   19,   19,   19,   19,   19,   19,
+       19,   19,   19,   19,   19,   19,   19,   19,   19,   19,
+       19,   19,   19,   19,   19,   19,   19,   19,   19,   19,
+        1,    1,    1,    1,   20,    1,   19,   19,   19,   19,
 
-        1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
-        1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
-        1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
+       19,   19,   19,   19,   19,   19,   19,   19,   19,   19,
+       19,   19,   19,   19,   19,   19,   19,   19,   19,   19,
+       19,   19,    1,   21,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
@@ -405,39 +407,51 @@ static yyconst flex_int32_t yy_ec[256] =
         1,    1,    1,    1,    1
     } ;
 
-static yyconst flex_int32_t yy_meta[11] =
+static yyconst flex_int32_t yy_meta[22] =
     {   0,
-        1,    2,    2,    1,    1,    1,    1,    1,    1,    1
+        1,    1,    2,    1,    1,    1,    1,    1,    1,    1,
+        1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
+        1
     } ;
 
-static yyconst flex_int16_t yy_base[22] =
+static yyconst flex_int16_t yy_base[41] =
     {   0,
-        0,    0,   20,   21,    0,    0,   21,   21,   21,   21,
-        2,    9,    9,    0,    7,    0,    6,    5,    4,   21,
-       11
+        0,    0,   57,   58,   20,   22,   39,   50,   58,   47,
+       58,   58,   58,   58,   13,   38,   58,   14,   35,   58,
+       34,   15,   29,   29,   58,   44,   43,   58,   32,   23,
+       31,   30,   58,   58,   22,   24,   58,   25,   58,   32
     } ;
 
-static yyconst flex_int16_t yy_def[22] =
+static yyconst flex_int16_t yy_def[41] =
     {   0,
-       20,    1,   20,   20,   21,   21,   20,   20,   20,   20,
-       20,   20,   11,   21,   20,   13,   20,   20,   20,    0,
-       20
+       39,    1,   39,   39,   39,   39,   39,   40,   39,   39,
+       39,   39,   39,   39,   39,   39,   39,   39,   39,   39,
+       39,   39,   39,   39,   39,   40,   40,   39,   39,   39,
+       39,   39,   39,   39,   39,   39,   39,   39,    0,   39
     } ;
 
-static yyconst flex_int16_t yy_nxt[32] =
+static yyconst flex_int16_t yy_nxt[80] =
     {   0,
         4,    5,    6,    7,    8,    9,   10,   11,   12,   13,
-       15,   16,   14,   19,   19,   17,   17,   18,   17,   20,
-        3,   20,   20,   20,   20,   20,   20,   20,   20,   20,
-       20
+       14,   15,   16,   17,   18,   19,   20,   21,   22,    4,
+       23,   24,   24,   24,   24,   29,   32,   30,   30,   35,
+       24,   24,   26,   36,   35,   32,   35,   30,   35,   38,
+       35,   35,   36,   35,   38,   31,   31,   27,   27,   37,
+       34,   33,   31,   28,   27,   25,   39,    3,   39,   39,
+       39,   39,   39,   39,   39,   39,   39,   39,   39,   39,
+       39,   39,   39,   39,   39,   39,   39,   39,   39
     } ;
 
-static yyconst flex_int16_t yy_chk[32] =
+static yyconst flex_int16_t yy_chk[80] =
     {   0,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
-       11,   11,   21,   19,   18,   17,   15,   13,   12,    3,
-       20,   20,   20,   20,   20,   20,   20,   20,   20,   20,
-       20
+        1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
+        1,    5,    5,    6,    6,   15,   18,   15,   18,   22,
+       24,   24,   40,   22,   22,   30,   35,   30,   36,   38,
+       35,   35,   36,   36,   32,   31,   29,   27,   26,   23,
+       21,   19,   16,   10,    8,    7,    3,   39,   39,   39,
+       39,   39,   39,   39,   39,   39,   39,   39,   39,   39,
+       39,   39,   39,   39,   39,   39,   39,   39,   39
     } ;
 
 /* The intent behind this definition is that it'll catch
@@ -461,7 +475,7 @@ static yyconst flex_int16_t yy_chk[32] =
 #include <stdio.h>
  
 #define YY_NO_UNISTD_H 1
-#line 465 "GeneratedFiles/FormulaLexer.c"
+#line 479 "GeneratedFiles/FormulaLexer.c"
 
 #define INITIAL 0
 
@@ -699,10 +713,10 @@ YY_DECL
 	register int yy_act;
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 
-#line 28 "FormulaLexer.l"
+#line 23 "FormulaLexer.l"
 
  
-#line 706 "GeneratedFiles/FormulaLexer.c"
+#line 720 "GeneratedFiles/FormulaLexer.c"
 
     yylval = yylval_param;
 
@@ -757,13 +771,13 @@ yy_match:
 			while ( yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state )
 				{
 				yy_current_state = (int) yy_def[yy_current_state];
-				if ( yy_current_state >= 21 )
+				if ( yy_current_state >= 40 )
 					yy_c = yy_meta[(unsigned int) yy_c];
 				}
 			yy_current_state = yy_nxt[yy_base[yy_current_state] + (unsigned int) yy_c];
 			++yy_cp;
 			}
-		while ( yy_current_state != 20 );
+		while ( yy_current_state != 39 );
 		yy_cp = yyg->yy_last_accepting_cpos;
 		yy_current_state = yyg->yy_last_accepting_state;
 
@@ -786,49 +800,119 @@ do_action:	/* This label is used only to access EOF actions. */
 case 1:
 /* rule 1 can match eol */
 YY_RULE_SETUP
-#line 30 "FormulaLexer.l"
+#line 25 "FormulaLexer.l"
 { /* Skip blanks. */ }
 	YY_BREAK
 case 2:
-#line 33 "FormulaLexer.l"
+#line 28 "FormulaLexer.l"
 case 3:
-#line 34 "FormulaLexer.l"
+#line 29 "FormulaLexer.l"
 case 4:
 YY_RULE_SETUP
-#line 34 "FormulaLexer.l"
-{ sscanf_s(yytext, "%f", &yylval->value); return TOKEN_NUMBER; }
+#line 29 "FormulaLexer.l"
+{ sscanf_s(yytext, "%f", &yylval->f_value); return TOKEN_NUMBER; }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 36 "FormulaLexer.l"
-{ return TOKEN_MULTIPLY; }
+#line 31 "FormulaLexer.l"
+{ return TOKEN_NAME; }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 37 "FormulaLexer.l"
-{ return TOKEN_PLUS; }
+#line 33 "FormulaLexer.l"
+{ return TOKEN_ID; }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 38 "FormulaLexer.l"
+#line 35 "FormulaLexer.l"
 { return TOKEN_LPAREN; }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 39 "FormulaLexer.l"
+#line 36 "FormulaLexer.l"
 { return TOKEN_RPAREN; }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 40 "FormulaLexer.l"
-{  }
+#line 37 "FormulaLexer.l"
+{ return TOKEN_PLUS; }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
+#line 38 "FormulaLexer.l"
+{ return TOKEN_MINUS; }
+	YY_BREAK
+case 11:
+YY_RULE_SETUP
+#line 39 "FormulaLexer.l"
+{ return TOKEN_MUL; }
+	YY_BREAK
+case 12:
+YY_RULE_SETUP
+#line 40 "FormulaLexer.l"
+{ return TOKEN_DIV; }
+	YY_BREAK
+case 13:
+YY_RULE_SETUP
+#line 41 "FormulaLexer.l"
+{ return TOKEN_PERCENT; }
+	YY_BREAK
+case 14:
+YY_RULE_SETUP
 #line 42 "FormulaLexer.l"
+{ return TOKEN_AND; }
+	YY_BREAK
+case 15:
+YY_RULE_SETUP
+#line 43 "FormulaLexer.l"
+{ return TOKEN_OR; }
+	YY_BREAK
+case 16:
+YY_RULE_SETUP
+#line 44 "FormulaLexer.l"
+{ return TOKEN_NOT; }
+	YY_BREAK
+case 17:
+YY_RULE_SETUP
+#line 45 "FormulaLexer.l"
+{ return TOKEN_EQ; }
+	YY_BREAK
+case 18:
+YY_RULE_SETUP
+#line 46 "FormulaLexer.l"
+{ return TOKEN_NEQ; }
+	YY_BREAK
+case 19:
+YY_RULE_SETUP
+#line 47 "FormulaLexer.l"
+{ return TOKEN_LT; }
+	YY_BREAK
+case 20:
+YY_RULE_SETUP
+#line 48 "FormulaLexer.l"
+{ return TOKEN_LTEQ; }
+	YY_BREAK
+case 21:
+YY_RULE_SETUP
+#line 49 "FormulaLexer.l"
+{ return TOKEN_GT; }
+	YY_BREAK
+case 22:
+YY_RULE_SETUP
+#line 50 "FormulaLexer.l"
+{ return TOKEN_GTEQ; }
+	YY_BREAK
+case 23:
+YY_RULE_SETUP
+#line 52 "FormulaLexer.l"
+{ return TOKEN_ERR; }
+	YY_BREAK
+case 24:
+YY_RULE_SETUP
+#line 54 "FormulaLexer.l"
 YY_FATAL_ERROR( "flex scanner jammed" );
 	YY_BREAK
-#line 832 "GeneratedFiles/FormulaLexer.c"
+#line 916 "GeneratedFiles/FormulaLexer.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -1123,7 +1207,7 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 		while ( yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state )
 			{
 			yy_current_state = (int) yy_def[yy_current_state];
-			if ( yy_current_state >= 21 )
+			if ( yy_current_state >= 40 )
 				yy_c = yy_meta[(unsigned int) yy_c];
 			}
 		yy_current_state = yy_nxt[yy_base[yy_current_state] + (unsigned int) yy_c];
@@ -1152,11 +1236,11 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 	while ( yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state )
 		{
 		yy_current_state = (int) yy_def[yy_current_state];
-		if ( yy_current_state >= 21 )
+		if ( yy_current_state >= 40 )
 			yy_c = yy_meta[(unsigned int) yy_c];
 		}
 	yy_current_state = yy_nxt[yy_base[yy_current_state] + (unsigned int) yy_c];
-	yy_is_jam = (yy_current_state == 20);
+	yy_is_jam = (yy_current_state == 39);
 
 	return yy_is_jam ? 0 : yy_current_state;
 }
@@ -1992,7 +2076,7 @@ void yyfree (void * ptr , yyscan_t yyscanner)
 
 #define YYTABLES_NAME "yytables"
 
-#line 42 "FormulaLexer.l"
+#line 54 "FormulaLexer.l"
 
 
  

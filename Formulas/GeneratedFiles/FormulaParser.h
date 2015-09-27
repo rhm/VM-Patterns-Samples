@@ -55,11 +55,29 @@ typedef void* yyscan_t;
    /* Put the tokens into the symbol table, so that GDB and other debuggers
       know about them.  */
    enum yytokentype {
-     TOKEN_PLUS = 258,
-     TOKEN_MULTIPLY = 259,
-     TOKEN_LPAREN = 260,
-     TOKEN_RPAREN = 261,
-     TOKEN_NUMBER = 262
+     TOKEN_OR = 258,
+     TOKEN_AND = 259,
+     TOKEN_NEQ = 260,
+     TOKEN_EQ = 261,
+     TOKEN_GTEQ = 262,
+     TOKEN_GT = 263,
+     TOKEN_LTEQ = 264,
+     TOKEN_LT = 265,
+     TOKEN_MINUS = 266,
+     TOKEN_PLUS = 267,
+     TOKEN_PERCENT = 268,
+     TOKEN_DIV = 269,
+     TOKEN_MUL = 270,
+     TOKEN_UNARY_NEG = 271,
+     TOKEN_NOT = 272,
+     TOKEN_ERR = 273,
+     TOKEN_LPAREN = 274,
+     TOKEN_RPAREN = 275,
+     TOKEN_TRUE = 276,
+     TOKEN_FALSE = 277,
+     TOKEN_NAME = 278,
+     TOKEN_NUMBER = 279,
+     TOKEN_ID = 280
    };
 #endif
 
@@ -72,13 +90,14 @@ typedef union YYSTYPE
 /* Line 1676 of yacc.c  */
 #line 37 "FormulaParser.y"
 
-    float value;
+    float f_value;
+	const char *n_value;
     ASTNode *expression;
 
 
 
 /* Line 1676 of yacc.c  */
-#line 82 "GeneratedFiles/FormulaParser.h"
+#line 101 "GeneratedFiles/FormulaParser.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

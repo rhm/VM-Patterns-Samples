@@ -35,18 +35,28 @@ typedef void* yyscan_t;
 %parse-param { yyscan_t scanner }
 
 %union {
-    float value;
+    float f_value;
+	const char *n_value;
     ASTNode *expression;
 }
+
+%left TOKEN_OR
+%left TOKEN_AND
+%left TOKEN_EQ TOKEN_NEQ
+%left TOKEN_LT TOKEN_LTEQ TOKEN_GT TOKEN_GTEQ
+%left TOKEN_PLUS TOKEN_MINUS
+%left TOKEN_MUL TOKEN_DIV TOKEN_PERCENT
+%right TOKEN_NOT TOKEN_UNARY_NEG
  
-%left '+' TOKEN_PLUS
-%left '*' TOKEN_MULTIPLY
- 
+%token TOKEN_ERR
+
 %token TOKEN_LPAREN
 %token TOKEN_RPAREN
-%token TOKEN_PLUS
-%token TOKEN_MULTIPLY
-%token <value> TOKEN_NUMBER
+%token TOKEN_TRUE
+%token TOKEN_FALSE
+%token <n_value> TOKEN_NAME
+%token <f_value> TOKEN_NUMBER
+%token <n_value> TOKEN_ID
 
 %type <expression> expr
  
@@ -57,10 +67,27 @@ input
     ;
  
 expr
-    : expr TOKEN_PLUS expr { $$ = createNode( eASTNodeType::ARITH_ADD, $1, $3 ); }
-    | expr TOKEN_MULTIPLY expr { $$ = createNode( eASTNodeType::ARITH_MUL, $1, $3 ); }
+    : expr TOKEN_PLUS expr		{ $$ = createNode( eASTNodeType::ARITH_ADD, $1, $3 ); }
+    | expr TOKEN_MINUS expr		{ $$ = createNode( eASTNodeType::ARITH_SUB, $1, $3 ); }
+	| expr TOKEN_MUL expr		{ $$ = createNode( eASTNodeType::ARITH_MUL, $1, $3 ); }
+	| expr TOKEN_DIV expr		{ $$ = createNode( eASTNodeType::ARITH_DIV, $1, $3 ); }
+	| expr TOKEN_PERCENT expr	{ $$ = createNode( eASTNodeType::ARITH_MOD, $1, $3 ); }
+	| expr TOKEN_AND expr		{ $$ = createNode( eASTNodeType::LOGICAL_AND, $1, $3 ); }
+	| expr TOKEN_OR expr		{ $$ = createNode( eASTNodeType::LOGICAL_OR, $1, $3 ); }
+	| TOKEN_NOT expr			{ $$ = createNode( eASTNodeType::LOGICAL_NOT, $2, nullptr ); }
+	| TOKEN_MINUS expr %prec TOKEN_UNARY_NEG { $$ = createNode( eASTNodeType::ARITH_SUB, new ASTNodeConst(0.f), $2 ); }
+	| expr TOKEN_EQ expr		{ $$ = createNode( eASTNodeType::COMP_EQ, $1, $3 ); }
+	| expr TOKEN_NEQ expr		{ $$ = createNode( eASTNodeType::COMP_NEQ, $1, $3 ); }
+	| expr TOKEN_LT expr		{ $$ = createNode( eASTNodeType::COMP_LT, $1, $3 ); }
+	| expr TOKEN_LTEQ expr		{ $$ = createNode( eASTNodeType::COMP_LTEQ, $1, $3 ); }
+	| expr TOKEN_GT expr		{ $$ = createNode( eASTNodeType::COMP_GT, $1, $3 ); }
+	| expr TOKEN_GTEQ expr		{ $$ = createNode( eASTNodeType::COMP_GTEQ, $1, $3 ); }
     | TOKEN_LPAREN expr TOKEN_RPAREN { $$ = $2; }
     | TOKEN_NUMBER { $$ = new ASTNodeConst($1); }
+	| TOKEN_NAME { $$ = new ASTNodeConst(""); }
+	| TOKEN_ID { $$ = new ASTNodeConst(""); }
+	| TOKEN_TRUE { $$ = new ASTNodeConst(true); }
+	| TOKEN_FALSE { $$ = new ASTNodeConst(false); }
 	;
  
 %%
