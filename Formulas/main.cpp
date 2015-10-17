@@ -50,7 +50,7 @@ int _tmain(int argc, _TCHAR* argv[])
  
     //printf("Result of '%s' is %d\n", test, result);
  
-    delete e;
+    freeNode(e);
  
     return 0;
 }

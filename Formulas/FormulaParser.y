@@ -6,7 +6,7 @@
  */
 #define YY_NO_UNISTD_H
 
-#include "Expression.h"
+#include "AST.h"
 #include "GeneratedFiles/FormulaParser.h"
 #include "GeneratedFiles/FormulaLexer.h"
 
@@ -75,7 +75,7 @@ expr
 	| expr TOKEN_AND expr		{ $$ = createNode( eASTNodeType::LOGICAL_AND, $1, $3 ); }
 	| expr TOKEN_OR expr		{ $$ = createNode( eASTNodeType::LOGICAL_OR, $1, $3 ); }
 	| TOKEN_NOT expr			{ $$ = createNode( eASTNodeType::LOGICAL_NOT, $2, nullptr ); }
-	| TOKEN_MINUS expr %prec TOKEN_UNARY_NEG { $$ = createNode( eASTNodeType::ARITH_SUB, new ASTNodeConst(0.f), $2 ); }
+	| TOKEN_MINUS expr %prec TOKEN_UNARY_NEG { $$ = createNode( eASTNodeType::ARITH_SUB, createConstNode(0.f), $2 ); }
 	| expr TOKEN_EQ expr		{ $$ = createNode( eASTNodeType::COMP_EQ, $1, $3 ); }
 	| expr TOKEN_NEQ expr		{ $$ = createNode( eASTNodeType::COMP_NEQ, $1, $3 ); }
 	| expr TOKEN_LT expr		{ $$ = createNode( eASTNodeType::COMP_LT, $1, $3 ); }
@@ -83,11 +83,11 @@ expr
 	| expr TOKEN_GT expr		{ $$ = createNode( eASTNodeType::COMP_GT, $1, $3 ); }
 	| expr TOKEN_GTEQ expr		{ $$ = createNode( eASTNodeType::COMP_GTEQ, $1, $3 ); }
     | TOKEN_LPAREN expr TOKEN_RPAREN { $$ = $2; }
-    | TOKEN_NUMBER { $$ = new ASTNodeConst($1); }
-	| TOKEN_NAME { $$ = new ASTNodeConst(""); }
-	| TOKEN_ID { $$ = new ASTNodeConst(""); }
-	| TOKEN_TRUE { $$ = new ASTNodeConst(true); }
-	| TOKEN_FALSE { $$ = new ASTNodeConst(false); }
+    | TOKEN_NUMBER				{ $$ = createConstNode($1); }
+	| TOKEN_NAME				{ $$ = createConstNode($1); }
+	| TOKEN_ID					{ $$ = createIDNode($1); }
+	| TOKEN_TRUE				{ $$ = createConstNode(true); }
+	| TOKEN_FALSE				{ $$ = createConstNode(false); }
 	;
  
 %%

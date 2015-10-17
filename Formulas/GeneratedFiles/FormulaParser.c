@@ -77,7 +77,7 @@
  */
 #define YY_NO_UNISTD_H
 
-#include "Expression.h"
+#include "AST.h"
 #include "GeneratedFiles/FormulaParser.h"
 #include "GeneratedFiles/FormulaLexer.h"
 
@@ -1493,7 +1493,7 @@ yyreduce:
 
 /* Line 1455 of yacc.c  */
 #line 78 "FormulaParser.y"
-    { (yyval.expression) = createNode( eASTNodeType::ARITH_SUB, new ASTNodeConst(0.f), (yyvsp[(2) - (2)].expression) ); ;}
+    { (yyval.expression) = createNode( eASTNodeType::ARITH_SUB, createConstNode(0.f), (yyvsp[(2) - (2)].expression) ); ;}
     break;
 
   case 12:
@@ -1549,35 +1549,35 @@ yyreduce:
 
 /* Line 1455 of yacc.c  */
 #line 86 "FormulaParser.y"
-    { (yyval.expression) = new ASTNodeConst((yyvsp[(1) - (1)].f_value)); ;}
+    { (yyval.expression) = createConstNode((yyvsp[(1) - (1)].f_value)); ;}
     break;
 
   case 20:
 
 /* Line 1455 of yacc.c  */
 #line 87 "FormulaParser.y"
-    { (yyval.expression) = new ASTNodeConst(""); ;}
+    { (yyval.expression) = createConstNode((yyvsp[(1) - (1)].n_value)); ;}
     break;
 
   case 21:
 
 /* Line 1455 of yacc.c  */
 #line 88 "FormulaParser.y"
-    { (yyval.expression) = new ASTNodeConst(""); ;}
+    { (yyval.expression) = createIDNode((yyvsp[(1) - (1)].n_value)); ;}
     break;
 
   case 22:
 
 /* Line 1455 of yacc.c  */
 #line 89 "FormulaParser.y"
-    { (yyval.expression) = new ASTNodeConst(true); ;}
+    { (yyval.expression) = createConstNode(true); ;}
     break;
 
   case 23:
 
 /* Line 1455 of yacc.c  */
 #line 90 "FormulaParser.y"
-    { (yyval.expression) = new ASTNodeConst(false); ;}
+    { (yyval.expression) = createConstNode(false); ;}
     break;
 
 

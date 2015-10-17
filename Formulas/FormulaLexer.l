@@ -5,11 +5,13 @@
  * To generate the lexical analyzer run: "flex Lexer.l"
  */
 
-#include "Expression.h"
+#include "AST.h"
 #include "GeneratedFiles/FormulaParser.h"
 
 #include <stdio.h>
- 
+
+const char *copyString(const char *start, size_t len); 
+
 %}
 
 %option outfile="GeneratedFiles/FormulaLexer.c" header-file="GeneratedFiles/FormulaLexer.h"
@@ -28,9 +30,9 @@ WS          [ \r\n\t]*
 -?[0-9]+"."[0-9]* |
 -?"."[0-9]+     { sscanf_s(yytext, "%f", &yylval->f_value); return TOKEN_NUMBER; }
 
-\".*\"			{ return TOKEN_NAME; }
+\".*\"			{ yylval->n_value = copyString(yytext+1, yyleng-1); return TOKEN_NAME; }
 
-[a-zA-Z]+[a-zA-Z0-9_]*	{ return TOKEN_ID; }
+[a-zA-Z]+[a-zA-Z0-9_]*	{ yylval->n_value = copyString(yytext, yyleng); return TOKEN_ID; }
 
 "("				{ return TOKEN_LPAREN; }
 ")"				{ return TOKEN_RPAREN; }
@@ -55,4 +57,12 @@ WS          [ \r\n\t]*
  
 int yyerror(const char *msg) {
     fprintf(stderr,"Error:%s\n",msg); return 0;
+}
+
+const char *copyString(const char *start, size_t len)
+{
+	char *result = (char*)malloc(len + 1);
+	memcpy(result, start, len);
+	result[len+1] = 0;
+	return result;
 }

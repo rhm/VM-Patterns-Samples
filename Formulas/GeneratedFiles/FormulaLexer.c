@@ -469,13 +469,15 @@ static yyconst flex_int16_t yy_chk[80] =
  * To generate the lexical analyzer run: "flex Lexer.l"
  */
 
-#include "Expression.h"
+#include "AST.h"
 #include "GeneratedFiles/FormulaParser.h"
 
 #include <stdio.h>
- 
+
+const char *copyString(const char *start, size_t len); 
+
 #define YY_NO_UNISTD_H 1
-#line 479 "GeneratedFiles/FormulaLexer.c"
+#line 481 "GeneratedFiles/FormulaLexer.c"
 
 #define INITIAL 0
 
@@ -713,10 +715,10 @@ YY_DECL
 	register int yy_act;
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
 
-#line 23 "FormulaLexer.l"
+#line 25 "FormulaLexer.l"
 
  
-#line 720 "GeneratedFiles/FormulaLexer.c"
+#line 722 "GeneratedFiles/FormulaLexer.c"
 
     yylval = yylval_param;
 
@@ -800,119 +802,119 @@ do_action:	/* This label is used only to access EOF actions. */
 case 1:
 /* rule 1 can match eol */
 YY_RULE_SETUP
-#line 25 "FormulaLexer.l"
+#line 27 "FormulaLexer.l"
 { /* Skip blanks. */ }
 	YY_BREAK
 case 2:
-#line 28 "FormulaLexer.l"
+#line 30 "FormulaLexer.l"
 case 3:
-#line 29 "FormulaLexer.l"
+#line 31 "FormulaLexer.l"
 case 4:
 YY_RULE_SETUP
-#line 29 "FormulaLexer.l"
+#line 31 "FormulaLexer.l"
 { sscanf_s(yytext, "%f", &yylval->f_value); return TOKEN_NUMBER; }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 31 "FormulaLexer.l"
-{ return TOKEN_NAME; }
+#line 33 "FormulaLexer.l"
+{ yylval->n_value = copyString(yytext+1, yyleng-1); return TOKEN_NAME; }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 33 "FormulaLexer.l"
-{ return TOKEN_ID; }
+#line 35 "FormulaLexer.l"
+{ yylval->n_value = copyString(yytext, yyleng); return TOKEN_ID; }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 35 "FormulaLexer.l"
+#line 37 "FormulaLexer.l"
 { return TOKEN_LPAREN; }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 36 "FormulaLexer.l"
+#line 38 "FormulaLexer.l"
 { return TOKEN_RPAREN; }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 37 "FormulaLexer.l"
+#line 39 "FormulaLexer.l"
 { return TOKEN_PLUS; }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 38 "FormulaLexer.l"
+#line 40 "FormulaLexer.l"
 { return TOKEN_MINUS; }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 39 "FormulaLexer.l"
+#line 41 "FormulaLexer.l"
 { return TOKEN_MUL; }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 40 "FormulaLexer.l"
+#line 42 "FormulaLexer.l"
 { return TOKEN_DIV; }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 41 "FormulaLexer.l"
+#line 43 "FormulaLexer.l"
 { return TOKEN_PERCENT; }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 42 "FormulaLexer.l"
+#line 44 "FormulaLexer.l"
 { return TOKEN_AND; }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 43 "FormulaLexer.l"
+#line 45 "FormulaLexer.l"
 { return TOKEN_OR; }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 44 "FormulaLexer.l"
+#line 46 "FormulaLexer.l"
 { return TOKEN_NOT; }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 45 "FormulaLexer.l"
+#line 47 "FormulaLexer.l"
 { return TOKEN_EQ; }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 46 "FormulaLexer.l"
+#line 48 "FormulaLexer.l"
 { return TOKEN_NEQ; }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 47 "FormulaLexer.l"
+#line 49 "FormulaLexer.l"
 { return TOKEN_LT; }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 48 "FormulaLexer.l"
+#line 50 "FormulaLexer.l"
 { return TOKEN_LTEQ; }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 49 "FormulaLexer.l"
+#line 51 "FormulaLexer.l"
 { return TOKEN_GT; }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 50 "FormulaLexer.l"
+#line 52 "FormulaLexer.l"
 { return TOKEN_GTEQ; }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 52 "FormulaLexer.l"
+#line 54 "FormulaLexer.l"
 { return TOKEN_ERR; }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 54 "FormulaLexer.l"
+#line 56 "FormulaLexer.l"
 YY_FATAL_ERROR( "flex scanner jammed" );
 	YY_BREAK
-#line 916 "GeneratedFiles/FormulaLexer.c"
+#line 918 "GeneratedFiles/FormulaLexer.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -2076,11 +2078,19 @@ void yyfree (void * ptr , yyscan_t yyscanner)
 
 #define YYTABLES_NAME "yytables"
 
-#line 54 "FormulaLexer.l"
+#line 56 "FormulaLexer.l"
 
 
  
 int yyerror(const char *msg) {
     fprintf(stderr,"Error:%s\n",msg); return 0;
+}
+
+const char *copyString(const char *start, size_t len)
+{
+	char *result = (char*)malloc(len + 1);
+	memcpy(result, start, len);
+	result[len+1] = 0;
+	return result;
 }
 

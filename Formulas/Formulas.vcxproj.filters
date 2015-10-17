@@ -25,12 +25,15 @@
     <ClInclude Include="Expression.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="AST.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Name.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Formulas.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\FormulaLexer.c">
@@ -40,6 +43,12 @@
       <Filter>Source Files\GeneratedFiles</Filter>
     </ClCompile>
     <ClCompile Include="Expression.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Name.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
