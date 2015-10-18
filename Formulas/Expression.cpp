@@ -57,6 +57,25 @@ const char *getTypeAsString(eExpType type)
 }
 
 
+/* 
+ * ExpressionDataWriter
+ */
+
+class ExpressionDataWriter
+{
+	ExpressionData *data;
+
+public:
+	ExpressionDataWriter();
+	~ExpressionDataWriter();
+
+	uint32_t addNumericConst(float value);
+	uint32_t addNameConst(Name value);
+
+	ExpressionData *getData();
+};
+
+
 
 /*
  * Node classes
@@ -81,9 +100,10 @@ public:
 	virtual ~ASTNode() {};
 
 	virtual bool typeCheck(const VariableLayout& varLayout, ExpressionErrorReporter& reporter) = 0;
-	virtual bool isConstant() const = 0;
 	virtual bool constFold(ASTNode **parentPointerToThis, ExpressionErrorReporter& reporter);
+	virtual void gatherConsts(ExpressionDataWriter& writer) {};
 
+	virtual bool isConstant() const = 0;
 	//virtual ResultInfo getResultInfo() const = 0;
 	eASTNodeType nodeType() const { return m_NodeType; }
 	eExpType exprType() const { return m_ExprType; }
@@ -107,6 +127,7 @@ public:
 
 	virtual bool isConstant() const override { return false; }
 	virtual bool constFold(ASTNode **parentPointerToThis, ExpressionErrorReporter& reporter) override;
+	virtual void gatherConsts(ExpressionDataWriter& writer);
 
 	ASTNode *leftChild() const { return m_leftChild; }
 	ASTNode *rightChild() const { return m_rightChild; }
@@ -115,7 +136,6 @@ public:
 
 class ASTNodeConst : public ASTNode
 {
-
 public:
 	ASTNodeConst(eASTNodeType t)
 		: ASTNode(t)
@@ -129,14 +149,18 @@ public:
 class ASTNodeConstNumber : public ASTNodeConst
 {
 	float m_value;
+	uint32_t constSlotIndex;
 
 public:
 	ASTNodeConstNumber(float _value)
 		: ASTNodeConst(eASTNodeType::VALUE_FLOAT)
 		, m_value(_value)
+		, constSlotIndex(UINT32_MAX)
 	{
 		m_ExprType = eExpType::NUMBER;
 	}
+
+	virtual void gatherConsts(ExpressionDataWriter& writer) override;
 
 	float value() const { return m_value; }
 };
@@ -145,14 +169,18 @@ public:
 class ASTNodeConstName : public ASTNodeConst
 {
 	Name m_value;
+	uint32_t constSlotIndex;
 
 public:
 	ASTNodeConstName(Name _value)
 		: ASTNodeConst(eASTNodeType::VALUE_NAME)
 		, m_value(_value)
+		, constSlotIndex(UINT32_MAX)
 	{
 		m_ExprType = eExpType::NAME;
 	}
+
+	virtual void gatherConsts(ExpressionDataWriter& writer) override;
 
 	Name value() const { return m_value; }
 };
@@ -307,6 +335,16 @@ bool ASTNodeNonLeaf::constFold(ASTNode **parentPointerToThis, ExpressionErrorRep
 
 	return constFoldThisNode(parentPointerToThis, reporter);
 }
+
+void ASTNodeNonLeaf::gatherConsts(ExpressionDataWriter& writer)
+{
+	m_leftChild->gatherConsts(writer);
+	if (m_rightChild)
+	{
+		m_rightChild->gatherConsts(writer);
+	}
+}
+
 
 
 /*
@@ -579,6 +617,17 @@ bool ASTNodeArith::constFoldThisNode(ASTNode **parentPointerToThis, ExpressionEr
  */
 
 
+void ASTNodeConstNumber::gatherConsts(ExpressionDataWriter& writer)
+{
+	constSlotIndex = writer.addNumericConst(value());
+}
+
+void ASTNodeConstName::gatherConsts(ExpressionDataWriter& writer)
+{
+	constSlotIndex = writer.addNameConst(value());
+}
+
+
 
 /*
  * ASTNodeID
@@ -706,3 +755,48 @@ int VariableLayout::getIndex(const Name& variableName) const
 	return it->second.index;
 }
 
+
+/*
+ * ExpressionDataWriter
+ */
+
+ExpressionDataWriter::ExpressionDataWriter()
+{
+	data = new ExpressionData();
+}
+
+ExpressionDataWriter::~ExpressionDataWriter()
+{
+	if (data)
+	{
+		delete data;
+	}
+}
+
+uint32_t ExpressionDataWriter::addNumericConst(float value)
+{
+	for (size_t i = 0; i < data->m_floats.size(); i++)
+	{
+		if (data->m_floats[i] == value)
+		{
+			return (uint32_t)i;
+		}
+	}
+
+	data->m_floats.push_back(value);
+	return (uint32_t)data->m_floats.size()-1;
+}
+
+uint32_t ExpressionDataWriter::addNameConst(Name value)
+{
+	for (size_t i = 0; i < data->m_names.size(); i++)
+	{
+		if (data->m_names[i] == value)
+		{
+			return (uint32_t)i;
+		}
+	}
+
+	data->m_names.push_back(value);
+	return (uint32_t)data->m_names.size()-1;
+}

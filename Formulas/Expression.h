@@ -27,7 +27,7 @@ enum class eExpType
 	BOOL
 };
 
-struct Expression
+struct ExpressionData
 {
 	std::vector<uint32_t> m_byteCode;
 	std::vector<float> m_floats;
