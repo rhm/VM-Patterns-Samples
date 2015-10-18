@@ -27,6 +27,7 @@ class Name
 	NameTable* getNameTable();
 
 public:
+	Name();
 	Name(const Name& rhs)
 	{
 		p = rhs.p;

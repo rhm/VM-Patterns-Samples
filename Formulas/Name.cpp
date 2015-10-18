@@ -25,6 +25,13 @@ inline NameTable* Name::getNameTable()
 	return sm_NT;
 }
 
+Name::Name()
+{
+	NameTable* nt = getNameTable();
+	auto retval = nt->m_strings.insert("UNINITIALISED");
+	p = (*retval.first).c_str();
+}
+
 Name::Name(const std::string& s)
 {
 	NameTable* nt = getNameTable();

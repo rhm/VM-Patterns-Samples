@@ -58,6 +58,67 @@ public:
 };
 
 
+/*
+ * ExpressionErrorReporter
+ *
+ */
+
+enum class eErrorCategory
+{
+	Syntax,
+	TypeCheck,
+	Identifier,
+	Math,
+};
+
+enum class eErrorCode
+{
+	SyntaxError,
+	IdentifierNotFound,
+	IdentifierType,
+	ArithmeticTypeError,
+	ComparisonTypeError,
+	LogicTypeError,
+	DivideByZero,
+};
+
+class ExpressionErrorReporter
+{
+public:
+	struct Info
+	{
+		eErrorCategory category;
+		eErrorCode code;
+		std::string message;
+	};
+
+private:
+	std::vector<Info> m_errors;
+
+public:
+	ExpressionErrorReporter() {}
+	~ExpressionErrorReporter() {}
+
+	void addError(eErrorCategory _category, eErrorCode _code, const std::string& _message)
+	{
+		m_errors.emplace_back(Info{ _category, _code, _message });
+	}
+
+	uint32_t errorCount() const { return m_errors.size(); }
+
+	const Info& error(uint32_t errorIndex) const 
+	{ 
+		assert(errorIndex >= 0 && errorIndex < m_errors.size());
+		return m_errors[errorIndex]; 
+	}
+};
+
+
+/*
+ * Compiler
+ *
+ */
+
 class ExpressionCompiler
 {
 

@@ -7,67 +7,54 @@
 
 #include <sstream>
 #include <stdlib.h>
+#include <math.h>
 
 #include "Expression.h"
 #include "Name.h"
 
 
 
+/*
+ * ResultInfo - describes where the results of a node come from
+ */
+
+enum class eResultSource
+{
+	INVALID,
+
+	Constant,
+	Register
+};
+
+struct ResultInfo
+{
+	eResultSource source;
+	int position;
+};
 
 
 /*
- * ExpressionErrorReporter
+ * Utility functions
  *
  */
 
-enum class eErrorCategory
+const char *getTypeAsString(eExpType type)
 {
-	Syntax,
-	TypeCheck,
-	Identifier,
-};
-
-enum class eErrorCode
-{
-	SyntaxError,
-	IdentifierNotFound,
-	IdentifierType,
-	ArithmeticTypeError,
-	ComparisonTypeError,
-	LogicTypeError,
-};
-
-class ExpressionErrorReporter
-{
-public:
-	struct Info
+	switch (type)
 	{
-		eErrorCategory category;
-		eErrorCode code;
-		std::string message;
-	};
+	case eExpType::BOOL:
+		return "BOOL";
 
-private:
-	std::vector<Info> m_errors;
+	case eExpType::NAME:
+		return "NAME";
 
-public:
-	ExpressionErrorReporter() {}
-	~ExpressionErrorReporter() {}
+	case eExpType::NUMBER:
+		return "NUMBER";
 
-	void addError(eErrorCategory _category, eErrorCode _code, const std::string& _message)
-	{
-		m_errors.emplace_back(Info{ _category, _code, _message });
+	default:
+		return "!ERROR!";
 	}
-
-	uint32_t errorCount() const { return m_errors.size(); }
-
-	const Info& error(uint32_t errorIndex) const 
-	{ 
-		assert(errorIndex >= 0 && errorIndex < m_errors.size());
-
-		return m_errors[errorIndex]; 
-	}
-};
+}
 
 
 
@@ -88,11 +75,16 @@ protected:
 		: m_NodeType(_nodeType)
 	{}
 
+	virtual bool constFoldThisNode(ASTNode **parentPointerToThis, ExpressionErrorReporter& reporter) { return true; }
+
 public:
 	virtual ~ASTNode() {};
 
 	virtual bool typeCheck(const VariableLayout& varLayout, ExpressionErrorReporter& reporter) = 0;
+	virtual bool isConstant() const = 0;
+	virtual bool constFold(ASTNode **parentPointerToThis, ExpressionErrorReporter& reporter);
 
+	//virtual ResultInfo getResultInfo() const = 0;
 	eASTNodeType nodeType() const { return m_NodeType; }
 	eExpType exprType() const { return m_ExprType; }
 
@@ -113,6 +105,9 @@ public:
 	{}
 	virtual ~ASTNodeNonLeaf();
 
+	virtual bool isConstant() const override { return false; }
+	virtual bool constFold(ASTNode **parentPointerToThis, ExpressionErrorReporter& reporter) override;
+
 	ASTNode *leftChild() const { return m_leftChild; }
 	ASTNode *rightChild() const { return m_rightChild; }
 };
@@ -127,6 +122,7 @@ public:
 	{}
 
 	virtual bool typeCheck(const VariableLayout& varLayout, ExpressionErrorReporter& reporter) override { return true; }
+	virtual bool isConstant() const override { return true; }
 };
 
 
@@ -187,6 +183,7 @@ public:
 	{}
 
 	virtual bool typeCheck(const VariableLayout& varLayout, ExpressionErrorReporter& reporter) override;
+	virtual bool constFoldThisNode(ASTNode **parentPointerToThis, ExpressionErrorReporter& reporter);
 };
 
 
@@ -198,6 +195,7 @@ public:
 	{}
 
 	virtual bool typeCheck(const VariableLayout& varLayout, ExpressionErrorReporter& reporter) override;
+	virtual bool constFoldThisNode(ASTNode **parentPointerToThis, ExpressionErrorReporter& reporter);
 };
 
 
@@ -209,6 +207,7 @@ public:
 	{}
 
 	virtual bool typeCheck(const VariableLayout& varLayout, ExpressionErrorReporter& reporter) override;
+	virtual bool constFoldThisNode(ASTNode **parentPointerToThis, ExpressionErrorReporter& reporter);
 };
 
 
@@ -223,6 +222,7 @@ public:
 	{}
 
 	virtual bool typeCheck(const VariableLayout& varLayout, ExpressionErrorReporter& reporter) override;
+	virtual bool isConstant() const override { return false; }
 
 	Name name() const { return m_name; }
 };
@@ -232,6 +232,12 @@ public:
  * ASTNode
  *
  */
+
+bool ASTNode::constFold(ASTNode **parentPointerToThis, ExpressionErrorReporter& reporter)
+{
+	return constFoldThisNode(parentPointerToThis, reporter);
+}
+
 
 const char* ASTNode::getOperatorAsString() const
 {
@@ -278,6 +284,30 @@ ASTNodeNonLeaf::~ASTNodeNonLeaf()
 	}
 }
 
+bool ASTNodeNonLeaf::constFold(ASTNode **parentPointerToThis, ExpressionErrorReporter& reporter)
+{
+	ASTNode *tempLeftChild(m_leftChild);
+	bool leftChildResult = m_leftChild->constFold(&m_leftChild, reporter);
+	if (tempLeftChild != m_leftChild)
+	{
+		freeNode(tempLeftChild);
+	}
+	if (!leftChildResult) return false;
+
+	if (m_rightChild)
+	{
+		ASTNode *tempRightChild(m_rightChild);
+		bool rightChildResult = m_rightChild->constFold(&m_rightChild, reporter);
+		if (tempRightChild != m_rightChild)
+		{
+			freeNode(tempRightChild);
+		}
+		if (!rightChildResult) return false;
+	}
+
+	return constFoldThisNode(parentPointerToThis, reporter);
+}
+
 
 /*
  * ASTNodeLogic
@@ -287,13 +317,20 @@ ASTNodeNonLeaf::~ASTNodeNonLeaf()
 bool ASTNodeLogic::typeCheck(const VariableLayout& varLayout, ExpressionErrorReporter& reporter)
 {
 	if (!m_leftChild->typeCheck(varLayout, reporter)) return false;
-	if (!m_rightChild->typeCheck(varLayout, reporter)) return false;
+	if (m_rightChild && !m_rightChild->typeCheck(varLayout, reporter)) return false;
 
 	if (m_leftChild->exprType() != eExpType::BOOL ||
-		m_rightChild->exprType() != eExpType::BOOL)
+		(m_rightChild && m_rightChild->exprType() != eExpType::BOOL))
 	{
 		std::ostringstream msg;
-		msg << "Both sides of " << getOperatorAsString() << " must be boolean";
+		if (nodeType() == eASTNodeType::LOGICAL_NOT)
+		{
+			msg << "Right side of " << getOperatorAsString() << " must be boolean";
+		}
+		else
+		{
+			msg << "Both sides of " << getOperatorAsString() << " must be boolean";	
+		}
 		reporter.addError(eErrorCategory::TypeCheck, eErrorCode::LogicTypeError, msg.str());
 
 		return false;
@@ -301,6 +338,39 @@ bool ASTNodeLogic::typeCheck(const VariableLayout& varLayout, ExpressionErrorRep
 
 	m_ExprType = eExpType::BOOL;
 	
+	return true;
+}
+
+bool ASTNodeLogic::constFoldThisNode(ASTNode **parentPointerToThis, ExpressionErrorReporter& reporter)
+{
+	if (m_leftChild->isConstant() && m_rightChild->isConstant())
+	{
+		assert(m_leftChild->exprType() == eExpType::BOOL);
+		assert(m_rightChild == nullptr || m_rightChild->exprType() == eExpType::BOOL);
+
+		const bool leftVal = reinterpret_cast<ASTNodeConstBool*>(m_leftChild)->value();
+		const bool rightVal = m_rightChild != nullptr ? reinterpret_cast<ASTNodeConstBool*>(m_rightChild)->value() : false;
+		bool newVal(false);
+
+		switch (nodeType())
+		{
+		case eASTNodeType::LOGICAL_AND: newVal = leftVal && rightVal; break;
+		case eASTNodeType::LOGICAL_OR: newVal = leftVal || rightVal; break;
+		case eASTNodeType::LOGICAL_NOT: newVal = !leftVal; break;
+
+		default:
+			assert(false);
+			return false;
+		}
+
+		freeNode(m_leftChild);
+		if (m_rightChild)
+		{
+			freeNode(m_rightChild);
+		}
+		*parentPointerToThis = createConstNode(newVal);
+	}
+
 	return true;
 }
 
@@ -315,6 +385,8 @@ bool ASTNodeComp::typeCheck(const VariableLayout& varLayout, ExpressionErrorRepo
 	if (!m_leftChild->typeCheck(varLayout, reporter)) return false;
 	if (!m_rightChild->typeCheck(varLayout, reporter)) return false;
 
+	m_ExprType = eExpType::BOOL;
+
 	if (m_leftChild->exprType() == m_rightChild->exprType())
 	{
 		std::ostringstream msg;
@@ -323,8 +395,114 @@ bool ASTNodeComp::typeCheck(const VariableLayout& varLayout, ExpressionErrorRepo
 
 		return false;
 	}
-	
-	m_ExprType = eExpType::BOOL;
+
+	if (m_leftChild->exprType() == eExpType::BOOL || m_leftChild->exprType() == eExpType::NAME)
+	{
+		switch (nodeType())
+		{
+		case eASTNodeType::COMP_NEQ:
+		case eASTNodeType::COMP_EQ:
+			// these are OK
+			break;
+
+		default:
+			{
+				std::ostringstream msg;
+				msg << "Operator " << getOperatorAsString() << " is invalid with " << getTypeAsString(m_leftChild->exprType()) << " operands";
+				reporter.addError(eErrorCategory::TypeCheck, eErrorCode::ComparisonTypeError, msg.str());
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+bool ASTNodeComp::constFoldThisNode(ASTNode **parentPointerToThis, ExpressionErrorReporter& reporter)
+{
+	if (m_leftChild->isConstant() && m_rightChild->isConstant())
+	{
+		switch (exprType())
+		{
+		case eExpType::BOOL:
+			{
+				assert(m_leftChild->exprType() == eExpType::BOOL);
+				assert(m_rightChild->exprType() == eExpType::BOOL);
+				
+				const bool leftVal = reinterpret_cast<ASTNodeConstBool*>(m_leftChild)->value();
+				const bool rightVal = reinterpret_cast<ASTNodeConstBool*>(m_rightChild)->value();
+				bool newVal(false);
+
+				switch (nodeType())
+				{
+				case eASTNodeType::COMP_EQ: newVal = leftVal == rightVal; break;
+				case eASTNodeType::COMP_NEQ: newVal = leftVal != rightVal; break;
+
+				default:
+					assert(false);
+					return false;
+				}
+
+				*parentPointerToThis = createConstNode(newVal);
+			}
+			break;
+
+		case eExpType::NAME:
+			{
+				assert(m_leftChild->exprType() == eExpType::NAME);
+				assert(m_rightChild->exprType() == eExpType::NAME);
+				
+				const Name leftVal = reinterpret_cast<ASTNodeConstName*>(m_leftChild)->value();
+				const Name rightVal = reinterpret_cast<ASTNodeConstName*>(m_rightChild)->value();
+				bool newVal(false);
+
+				switch (nodeType())
+				{
+				case eASTNodeType::COMP_EQ: newVal = leftVal == rightVal; break;
+				case eASTNodeType::COMP_NEQ: newVal = leftVal != rightVal; break;
+
+				default:
+					assert(false);
+					return false;
+				}
+
+				*parentPointerToThis = createConstNode(newVal);
+			}
+			break;
+
+		case eExpType::NUMBER:
+			{
+				assert(m_leftChild->exprType() == eExpType::NUMBER);
+				assert(m_rightChild->exprType() == eExpType::NUMBER);
+				
+				const float leftVal = reinterpret_cast<ASTNodeConstNumber*>(m_leftChild)->value();
+				const float rightVal = reinterpret_cast<ASTNodeConstNumber*>(m_rightChild)->value();
+				bool newVal(false);
+
+				switch (nodeType())
+				{
+				case eASTNodeType::COMP_EQ: newVal = leftVal == rightVal; break;
+				case eASTNodeType::COMP_NEQ: newVal = leftVal != rightVal; break;
+				case eASTNodeType::COMP_GT: newVal = leftVal > rightVal; break;
+				case eASTNodeType::COMP_GTEQ: newVal = leftVal >= rightVal; break;
+				case eASTNodeType::COMP_LT: newVal = leftVal < rightVal; break;
+				case eASTNodeType::COMP_LTEQ: newVal = leftVal <= rightVal; break;
+
+				default:
+					assert(false);
+					return false;
+				}
+
+				*parentPointerToThis = createConstNode(newVal);
+			}
+
+			break;
+
+		default:
+			assert(false);
+			return false;
+		}
+	}
 
 	return true;
 }
@@ -352,6 +530,45 @@ bool ASTNodeArith::typeCheck(const VariableLayout& varLayout, ExpressionErrorRep
 
 	m_ExprType = eExpType::NUMBER;
 	
+	return true;
+}
+
+bool ASTNodeArith::constFoldThisNode(ASTNode **parentPointerToThis, ExpressionErrorReporter& reporter)
+{
+	if (m_leftChild->isConstant() && m_rightChild->isConstant())
+	{
+		assert(m_leftChild->exprType() == eExpType::NUMBER);
+		assert(m_rightChild->exprType() == eExpType::NUMBER);
+
+		const float leftValue = reinterpret_cast<ASTNodeConstNumber*>(m_leftChild)->value();
+		const float rightValue = reinterpret_cast<ASTNodeConstNumber*>(m_rightChild)->value();
+		float result(0.f);
+
+		switch (nodeType())
+		{
+		case eASTNodeType::ARITH_ADD: result = leftValue + rightValue; break;
+		case eASTNodeType::ARITH_SUB: result = leftValue - rightValue; break;
+		case eASTNodeType::ARITH_MUL: result = leftValue * rightValue; break;
+		case eASTNodeType::ARITH_DIV:
+			if (rightValue == 0.f)
+			{
+				std::ostringstream msg;
+				msg << "Divide by zero detected: " << leftValue << "/" << rightValue;
+				reporter.addError(eErrorCategory::Math, eErrorCode::DivideByZero, msg.str());
+				return false;
+			}
+			result = leftValue / rightValue; 
+			break;
+
+		case eASTNodeType::ARITH_MOD: result = remainderf(leftValue, rightValue); break;
+
+		default:
+			assert(false);
+		}
+
+		*parentPointerToThis = createConstNode(result);
+	}
+
 	return true;
 }
 
