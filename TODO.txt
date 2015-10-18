@@ -1,0 +1,37 @@
+TODO
+====
+
+
+General
+-------
+
+* Unit test system
+
+
+Formalas
+--------
+
+* AST tasks
+	* Const folding - done
+	* Const gather - done
+	* Register allocation - done
+	* Code gen
+* Compiler class
+* Evaluation engine
+* Test suite
+
+
+Naive Behaviour tree
+--------------------
+
+
+Efficient Behaviour tree
+------------------------
+
+
+Bytecode behaviour tree
+-----------------------
+
+
+Contact Processor
+-----------------

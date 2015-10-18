@@ -64,6 +64,7 @@ const char *getTypeAsString(eExpType type)
 class ExpressionDataWriter
 {
 	ExpressionData *data;
+	uint32_t maxRegisterCount;
 
 public:
 	ExpressionDataWriter();
@@ -71,6 +72,7 @@ public:
 
 	uint32_t addNumericConst(float value);
 	uint32_t addNameConst(Name value);
+	void setMaxRegisterCount(uint32_t count);
 
 	ExpressionData *getData();
 };
@@ -102,6 +104,7 @@ public:
 	virtual bool typeCheck(const VariableLayout& varLayout, ExpressionErrorReporter& reporter) = 0;
 	virtual bool constFold(ASTNode **parentPointerToThis, ExpressionErrorReporter& reporter);
 	virtual void gatherConsts(ExpressionDataWriter& writer) {};
+	virtual void allocateRegisters(uint32_t useRegister, uint32_t& maxRegister) {};
 
 	virtual bool isConstant() const = 0;
 	//virtual ResultInfo getResultInfo() const = 0;
@@ -116,18 +119,21 @@ class ASTNodeNonLeaf : public ASTNode
 {
 protected:
 	ASTNode *m_leftChild, *m_rightChild;
+	uint32_t resultRegister;
 
 public:
 	ASTNodeNonLeaf(eASTNodeType _nodeType, ASTNode *_leftChild, ASTNode *_rightChild)
 		: ASTNode(_nodeType)
 		, m_leftChild(_leftChild)
 		, m_rightChild(_rightChild)
+		, resultRegister(UINT32_MAX)
 	{}
 	virtual ~ASTNodeNonLeaf();
 
 	virtual bool isConstant() const override { return false; }
 	virtual bool constFold(ASTNode **parentPointerToThis, ExpressionErrorReporter& reporter) override;
-	virtual void gatherConsts(ExpressionDataWriter& writer);
+	virtual void gatherConsts(ExpressionDataWriter& writer) override;
+	virtual void allocateRegisters(uint32_t useRegister, uint32_t& maxRegister) override;
 
 	ASTNode *leftChild() const { return m_leftChild; }
 	ASTNode *rightChild() const { return m_rightChild; }
@@ -266,7 +272,6 @@ bool ASTNode::constFold(ASTNode **parentPointerToThis, ExpressionErrorReporter& 
 	return constFoldThisNode(parentPointerToThis, reporter);
 }
 
-
 const char* ASTNode::getOperatorAsString() const
 {
 	switch (m_NodeType)
@@ -342,6 +347,21 @@ void ASTNodeNonLeaf::gatherConsts(ExpressionDataWriter& writer)
 	if (m_rightChild)
 	{
 		m_rightChild->gatherConsts(writer);
+	}
+}
+
+void ASTNodeNonLeaf::allocateRegisters(uint32_t useRegister, uint32_t& maxRegister)
+{
+	resultRegister = useRegister;
+	if (useRegister > maxRegister)
+	{
+		maxRegister = useRegister;
+	}
+
+	m_leftChild->allocateRegisters(useRegister, maxRegister);
+	if (m_rightChild)
+	{
+		m_rightChild->allocateRegisters(useRegister + 1, maxRegister);
 	}
 }
 
@@ -799,4 +819,17 @@ uint32_t ExpressionDataWriter::addNameConst(Name value)
 
 	data->m_names.push_back(value);
 	return (uint32_t)data->m_names.size()-1;
+}
+
+void ExpressionDataWriter::setMaxRegisterCount(uint32_t count)
+{
+	maxRegisterCount = count;
+}
+
+ExpressionData* ExpressionDataWriter::getData()
+{
+	ExpressionData* tempData = data;
+	data = nullptr;
+
+	return tempData;
 }
