@@ -78,7 +78,6 @@ public:
 };
 
 
-
 /*
  * Node classes
  *
@@ -401,32 +400,65 @@ bool ASTNodeLogic::typeCheck(const VariableLayout& varLayout, ExpressionErrorRep
 
 bool ASTNodeLogic::constFoldThisNode(ASTNode **parentPointerToThis, ExpressionErrorReporter& reporter)
 {
-	if (m_leftChild->isConstant() && m_rightChild->isConstant())
+	if (nodeType() == eASTNodeType::LOGICAL_NOT && m_leftChild->isConstant())
 	{
 		assert(m_leftChild->exprType() == eExpType::BOOL);
-		assert(m_rightChild == nullptr || m_rightChild->exprType() == eExpType::BOOL);
-
 		const bool leftVal = reinterpret_cast<ASTNodeConstBool*>(m_leftChild)->value();
-		const bool rightVal = m_rightChild != nullptr ? reinterpret_cast<ASTNodeConstBool*>(m_rightChild)->value() : false;
-		bool newVal(false);
 
-		switch (nodeType())
+		*parentPointerToThis = createConstNode(!leftVal);
+	}
+	else if (nodeType() == eASTNodeType::LOGICAL_AND &&
+			 (m_leftChild->isConstant() || m_rightChild->isConstant()))
+	{
+		assert(m_leftChild->exprType() == eExpType::BOOL);
+		assert(m_rightChild && m_rightChild->exprType() == eExpType::BOOL);
+
+		const bool leftVal = m_leftChild->isConstant() ? reinterpret_cast<ASTNodeConstBool*>(m_leftChild)->value() : true;
+		const bool rightVal = m_rightChild->isConstant() ? reinterpret_cast<ASTNodeConstBool*>(m_rightChild)->value() : true;
+		
+		if (!(leftVal && rightVal))
 		{
-		case eASTNodeType::LOGICAL_AND: newVal = leftVal && rightVal; break;
-		case eASTNodeType::LOGICAL_OR: newVal = leftVal || rightVal; break;
-		case eASTNodeType::LOGICAL_NOT: newVal = !leftVal; break;
-
-		default:
-			assert(false);
-			return false;
+			*parentPointerToThis = createConstNode(false);
 		}
-
-		freeNode(m_leftChild);
-		if (m_rightChild)
+		else if (m_leftChild->isConstant())
 		{
-			freeNode(m_rightChild);
+			*parentPointerToThis = m_rightChild;
+			m_rightChild = nullptr;
 		}
-		*parentPointerToThis = createConstNode(newVal);
+		else
+		{
+			*parentPointerToThis = m_leftChild;
+			m_leftChild = nullptr;
+		}
+	}
+	else if (nodeType() == eASTNodeType::LOGICAL_OR &&
+			 (m_leftChild->isConstant() || m_rightChild->isConstant()))
+	{
+		assert(m_leftChild->exprType() == eExpType::BOOL);
+		assert(m_rightChild && m_rightChild->exprType() == eExpType::BOOL);
+
+		const bool leftVal = m_leftChild->isConstant() ? reinterpret_cast<ASTNodeConstBool*>(m_leftChild)->value() : false;
+		const bool rightVal = m_rightChild->isConstant() ? reinterpret_cast<ASTNodeConstBool*>(m_rightChild)->value() : false;
+		
+		if (leftVal || rightVal)
+		{
+			*parentPointerToThis = createConstNode(true);
+		}
+		else if (m_leftChild->isConstant())
+		{
+			*parentPointerToThis = m_rightChild;
+			m_rightChild = nullptr;
+		}
+		else
+		{
+			*parentPointerToThis = m_leftChild;
+			m_leftChild = nullptr;
+		}
+	}
+	else
+	{
+		assert(false);
+		return false;
 	}
 
 	return true;
