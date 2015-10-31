@@ -15,9 +15,9 @@ Formalas
 	* Const folding - done
 	* Const gather - done
 	* Register allocation - done
-	* Code gen
-* Compiler class
-* Evaluation engine
+	* Code gen - done
+* Compiler class - done
+* Evaluation engine - done
 * Test suite
 
 
