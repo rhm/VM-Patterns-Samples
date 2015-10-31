@@ -1,6 +1,9 @@
 /*
- * Expression.c
- * Implementation of functions used to build the syntax tree.
+ * Expression.cpp
+ *
+ * AST nodes, compiler core, VM definition and execution engine. Ideally this would be split out
+ * into more files, but to keep the projects small for this example, it is all in one.
+ *
  */
 
 #include "stdafx.h"
@@ -13,6 +16,13 @@
 #include "Name.h"
 
 
+/*
+ * Defines
+ */
+
+#define USE_OPCODE_BIT_ENCODING 1
+
+
 
 /*
  * ResultInfo - describes where the results of a node come from
@@ -23,13 +33,19 @@ enum class eResultSource
 	INVALID,
 
 	Constant,
-	Register
+	Register,
+	Variable
 };
 
 struct ResultInfo
 {
 	eResultSource source;
-	int position;
+	ExpressionSlotIndex index;
+
+	ResultInfo(eResultSource _source, ExpressionSlotIndex _index)
+		: source(_source)
+		, index(_index)
+	{}
 };
 
 
@@ -58,21 +74,176 @@ const char *getTypeAsString(eExpType type)
 
 
 /* 
+ * Bytecode values
+ */
+
+#define LEFT_REG_BITS    0x00
+#define LEFT_CONST_BITS  0x04 // 0b00000100
+#define LEFT_VAR_BITS    0x08 // 0b00001000
+#define RIGHT_REG_BITS   0x00
+#define RIGHT_CONST_BITS 0x01 // 0b00000001
+#define RIGHT_VAR_BITS   0x02 // 0b00000010
+
+#define OP_FLAG_BITS 4
+#define OPCODE(OP,LEFT,RIGHT) ((((uint8_t)OP)<<(OP_FLAG_BITS))|(LEFT)|(RIGHT))
+
+
+enum class eSimpleOp : uint8_t
+{
+	UNINITIALISED,
+
+	ADD,
+	SUB,
+	MUL,
+	DIV,
+	MOD,
+
+	AND,
+	OR,
+	XOR,
+	NOT,
+
+	NAME_EQ,
+	NAME_NEQ,
+	BOOL_EQ,
+	NUM_EQ,
+	NUM_NEQ,
+	NUM_LT,
+	NUM_GT,
+	NUM_LTEQ,
+	NUM_GTEQ
+};
+
+#if USE_OPCODE_BIT_ENCODING
+
+enum class eEncOpcode : uint16_t
+{
+	UNINITIALISED = eSimpleOp::UNINITIALISED,
+
+	// Arithmetic (Numeric)
+	ADD			= OPCODE(eSimpleOp::ADD,LEFT_REG_BITS,  RIGHT_REG_BITS),
+	ADD_LC		= OPCODE(eSimpleOp::ADD,LEFT_CONST_BITS,RIGHT_REG_BITS),
+	ADD_LV		= OPCODE(eSimpleOp::ADD,LEFT_VAR_BITS,  RIGHT_REG_BITS),
+	ADD_LV_RV	= OPCODE(eSimpleOp::ADD,LEFT_VAR_BITS,  RIGHT_VAR_BITS),
+	ADD_LC_RV   = OPCODE(eSimpleOp::ADD,LEFT_CONST_BITS,RIGHT_VAR_BITS),
+
+	SUB			= OPCODE(eSimpleOp::SUB,LEFT_REG_BITS,  RIGHT_REG_BITS),
+	SUB_LC		= OPCODE(eSimpleOp::SUB,LEFT_CONST_BITS,RIGHT_REG_BITS),
+	SUB_LV		= OPCODE(eSimpleOp::SUB,LEFT_VAR_BITS,  RIGHT_REG_BITS),
+	SUB_RC		= OPCODE(eSimpleOp::SUB,LEFT_REG_BITS,  RIGHT_CONST_BITS),
+	SUB_RV		= OPCODE(eSimpleOp::SUB,LEFT_REG_BITS,  RIGHT_VAR_BITS),
+	SUB_LC_RV	= OPCODE(eSimpleOp::SUB,LEFT_CONST_BITS,RIGHT_VAR_BITS),
+	SUB_LV_RC	= OPCODE(eSimpleOp::SUB,LEFT_VAR_BITS,  RIGHT_CONST_BITS),
+	SUB_LV_RV	= OPCODE(eSimpleOp::SUB,LEFT_VAR_BITS,  RIGHT_VAR_BITS),
+	
+	MUL			= OPCODE(eSimpleOp::MUL,LEFT_REG_BITS,  RIGHT_REG_BITS),
+	MUL_LC		= OPCODE(eSimpleOp::MUL,LEFT_CONST_BITS,RIGHT_REG_BITS),
+	MUL_LV		= OPCODE(eSimpleOp::MUL,LEFT_VAR_BITS,  RIGHT_REG_BITS),
+	MUL_LV_RV	= OPCODE(eSimpleOp::MUL,LEFT_VAR_BITS,  RIGHT_VAR_BITS),
+	MUL_LC_RV	= OPCODE(eSimpleOp::MUL,LEFT_CONST_BITS,RIGHT_VAR_BITS),
+
+	DIV			= OPCODE(eSimpleOp::DIV,LEFT_REG_BITS,  RIGHT_REG_BITS),
+	DIV_LC		= OPCODE(eSimpleOp::DIV,LEFT_CONST_BITS,RIGHT_REG_BITS),
+	DIV_LV		= OPCODE(eSimpleOp::DIV,LEFT_VAR_BITS,  RIGHT_REG_BITS),
+	DIV_RC		= OPCODE(eSimpleOp::DIV,LEFT_REG_BITS,  RIGHT_CONST_BITS),
+	DIV_RV		= OPCODE(eSimpleOp::DIV,LEFT_REG_BITS,  RIGHT_VAR_BITS),
+	DIV_LC_RV	= OPCODE(eSimpleOp::DIV,LEFT_CONST_BITS,RIGHT_VAR_BITS),
+	DIV_LV_RC	= OPCODE(eSimpleOp::DIV,LEFT_VAR_BITS,  RIGHT_CONST_BITS),
+	DIV_LV_RV	= OPCODE(eSimpleOp::DIV,LEFT_VAR_BITS,  RIGHT_VAR_BITS),
+
+	MOD			= OPCODE(eSimpleOp::MOD,LEFT_REG_BITS,  RIGHT_REG_BITS),
+	MOD_LC		= OPCODE(eSimpleOp::MOD,LEFT_CONST_BITS,RIGHT_REG_BITS),
+	MOD_LV		= OPCODE(eSimpleOp::MOD,LEFT_VAR_BITS,  RIGHT_REG_BITS),
+	MOD_RC		= OPCODE(eSimpleOp::MOD,LEFT_REG_BITS,  RIGHT_CONST_BITS),
+	MOD_RV		= OPCODE(eSimpleOp::MOD,LEFT_REG_BITS,  RIGHT_VAR_BITS),
+	MOD_LC_RV	= OPCODE(eSimpleOp::MOD,LEFT_CONST_BITS,RIGHT_VAR_BITS),
+	MOD_LV_RC	= OPCODE(eSimpleOp::MOD,LEFT_VAR_BITS,  RIGHT_CONST_BITS),
+	MOD_LV_RV	= OPCODE(eSimpleOp::MOD,LEFT_VAR_BITS,  RIGHT_VAR_BITS),
+
+	// Logic (Boolean)
+	AND			= OPCODE(eSimpleOp::AND,LEFT_REG_BITS,  RIGHT_REG_BITS),
+	OR			= OPCODE(eSimpleOp::OR,LEFT_REG_BITS,  RIGHT_REG_BITS),
+	XOR			= OPCODE(eSimpleOp::XOR,LEFT_REG_BITS, RIGHT_REG_BITS),
+	NOT			= OPCODE(eSimpleOp::NOT,LEFT_REG_BITS, RIGHT_REG_BITS), // right not used
+
+	// Comparison (Names)
+	NAME_EQ_LC_RV  = OPCODE(eSimpleOp::NAME_EQ ,LEFT_CONST_BITS,RIGHT_VAR_BITS),
+	NAME_EQ_LV_RV  = OPCODE(eSimpleOp::NAME_EQ ,LEFT_VAR_BITS,  RIGHT_VAR_BITS),
+	NAME_NEQ_LC_RV = OPCODE(eSimpleOp::NAME_NEQ,LEFT_CONST_BITS,RIGHT_VAR_BITS),
+	NAME_NEQ_LV_RV = OPCODE(eSimpleOp::NAME_NEQ,LEFT_VAR_BITS  ,RIGHT_VAR_BITS),
+
+	// Comparison (Boolean)	[NEQ is handled by XOR]
+	BOOL_EQ		  = OPCODE(eSimpleOp::BOOL_EQ ,LEFT_REG_BITS,RIGHT_REG_BITS),
+
+	// Comparison (Numeric)
+	NUM_EQ			= OPCODE(eSimpleOp::NUM_EQ,  LEFT_REG_BITS,  RIGHT_REG_BITS),
+	NUM_EQ_LC		= OPCODE(eSimpleOp::NUM_EQ,  LEFT_CONST_BITS,RIGHT_REG_BITS),
+	NUM_EQ_LV		= OPCODE(eSimpleOp::NUM_EQ,  LEFT_VAR_BITS,  RIGHT_REG_BITS),
+	NUM_EQ_LV_RV	= OPCODE(eSimpleOp::NUM_EQ,  LEFT_VAR_BITS,  RIGHT_VAR_BITS),
+	NUM_EQ_LV_RC	= OPCODE(eSimpleOp::NUM_EQ,  LEFT_VAR_BITS,  RIGHT_CONST_BITS),
+
+	NUM_NEQ			= OPCODE(eSimpleOp::NUM_NEQ,  LEFT_REG_BITS,  RIGHT_REG_BITS),
+	NUM_NEQ_LC		= OPCODE(eSimpleOp::NUM_NEQ,  LEFT_CONST_BITS,RIGHT_REG_BITS),
+	NUM_NEQ_LV		= OPCODE(eSimpleOp::NUM_NEQ,  LEFT_VAR_BITS,  RIGHT_REG_BITS),
+	NUM_NEQ_LV_RV	= OPCODE(eSimpleOp::NUM_NEQ,  LEFT_VAR_BITS,  RIGHT_VAR_BITS),
+	NUM_NEQ_LV_RC	= OPCODE(eSimpleOp::NUM_NEQ,  LEFT_VAR_BITS,  RIGHT_CONST_BITS),
+
+	NUM_LT			= OPCODE(eSimpleOp::NUM_LT,  LEFT_REG_BITS,  RIGHT_REG_BITS),
+	NUM_LT_LC		= OPCODE(eSimpleOp::NUM_LT,  LEFT_CONST_BITS,RIGHT_REG_BITS),
+	NUM_LT_LV		= OPCODE(eSimpleOp::NUM_LT,  LEFT_VAR_BITS,  RIGHT_REG_BITS),
+	NUM_LT_LV_RV	= OPCODE(eSimpleOp::NUM_LT,  LEFT_VAR_BITS,  RIGHT_VAR_BITS),
+	NUM_LT_LV_RC	= OPCODE(eSimpleOp::NUM_LT,  LEFT_VAR_BITS,  RIGHT_CONST_BITS),
+
+	NUM_GT			= OPCODE(eSimpleOp::NUM_GT,  LEFT_REG_BITS,  RIGHT_REG_BITS),
+	NUM_GT_LC		= OPCODE(eSimpleOp::NUM_GT,  LEFT_CONST_BITS,RIGHT_REG_BITS),
+	NUM_GT_LV		= OPCODE(eSimpleOp::NUM_GT,  LEFT_VAR_BITS,  RIGHT_REG_BITS),
+	NUM_GT_LV_RV	= OPCODE(eSimpleOp::NUM_GT,  LEFT_VAR_BITS,  RIGHT_VAR_BITS),
+	NUM_GT_LV_RC	= OPCODE(eSimpleOp::NUM_GT,  LEFT_VAR_BITS,  RIGHT_CONST_BITS),
+
+	NUM_LTEQ		= OPCODE(eSimpleOp::NUM_LTEQ,LEFT_REG_BITS,  RIGHT_REG_BITS),
+	NUM_LTEQ_LC		= OPCODE(eSimpleOp::NUM_LTEQ,LEFT_CONST_BITS,RIGHT_REG_BITS),
+	NUM_LTEQ_LV		= OPCODE(eSimpleOp::NUM_LTEQ,LEFT_VAR_BITS,  RIGHT_REG_BITS),
+	NUM_LTEQ_LV_RV	= OPCODE(eSimpleOp::NUM_LTEQ,LEFT_VAR_BITS,  RIGHT_VAR_BITS),
+	NUM_LTEQ_LV_RC	= OPCODE(eSimpleOp::NUM_LTEQ,LEFT_VAR_BITS,  RIGHT_CONST_BITS),
+
+	NUM_GTEQ		= OPCODE(eSimpleOp::NUM_GTEQ,LEFT_REG_BITS,  RIGHT_REG_BITS),
+	NUM_GTEQ_LC		= OPCODE(eSimpleOp::NUM_GTEQ,LEFT_CONST_BITS,RIGHT_REG_BITS),
+	NUM_GTEQ_LV		= OPCODE(eSimpleOp::NUM_GTEQ,LEFT_VAR_BITS,  RIGHT_REG_BITS),
+	NUM_GTEQ_LV_RV	= OPCODE(eSimpleOp::NUM_GTEQ,LEFT_VAR_BITS,  RIGHT_VAR_BITS),
+	NUM_GTEQ_LV_RC	= OPCODE(eSimpleOp::NUM_GTEQ,LEFT_VAR_BITS,  RIGHT_CONST_BITS),
+
+	OPCODE_MAX
+};
+
+inline eEncOpcode encodeOp(eSimpleOp simpleOp, eResultSource leftSource, eResultSource rightSource)
+{
+	return static_cast<eEncOpcode>(OPCODE(static_cast<uint8_t>(simpleOp), static_cast<uint8_t>(leftSource), static_cast<uint8_t>(rightSource)));
+}
+
+
+#else // !USE_OPCODE_BIT_ENCODING
+
+
+
+
+#endif // USE_OPCODE_BIT_ENCODING
+
+/* 
  * ExpressionDataWriter
  */
 
 class ExpressionDataWriter
 {
 	ExpressionData *data;
-	uint32_t maxRegisterCount;
 
 public:
 	ExpressionDataWriter();
 	~ExpressionDataWriter();
 
-	uint32_t addNumericConst(float value);
-	uint32_t addNameConst(Name value);
-	void setMaxRegisterCount(uint32_t count);
+	ExpressionSlotIndex addNumericConst(float value);
+	ExpressionSlotIndex addNameConst(Name value);
+
+	void emitInstr(eEncOpcode opcode, ExpressionSlotIndex resultReg, ExpressionSlotIndex leftOperand, ExpressionSlotIndex rightOperand);
 
 	ExpressionData *getData();
 };
@@ -104,9 +275,10 @@ public:
 	virtual bool constFold(ASTNode **parentPointerToThis, ExpressionErrorReporter& reporter);
 	virtual void gatherConsts(ExpressionDataWriter& writer) {};
 	virtual void allocateRegisters(uint32_t useRegister, uint32_t& maxRegister) {};
+	virtual void generateCode(ExpressionDataWriter& writer) = 0;
 
 	virtual bool isConstant() const = 0;
-	//virtual ResultInfo getResultInfo() const = 0;
+	virtual ResultInfo getResultInfo() const = 0;
 	eASTNodeType nodeType() const { return m_NodeType; }
 	eExpType exprType() const { return m_ExprType; }
 
@@ -134,6 +306,8 @@ public:
 	virtual void gatherConsts(ExpressionDataWriter& writer) override;
 	virtual void allocateRegisters(uint32_t useRegister, uint32_t& maxRegister) override;
 
+	virtual ResultInfo getResultInfo() const override;
+
 	ASTNode *leftChild() const { return m_leftChild; }
 	ASTNode *rightChild() const { return m_rightChild; }
 };
@@ -148,24 +322,26 @@ public:
 
 	virtual bool typeCheck(const VariableLayout& varLayout, ExpressionErrorReporter& reporter) override { return true; }
 	virtual bool isConstant() const override { return true; }
+	virtual void generateCode(ExpressionDataWriter& writer) override {}
 };
 
 
 class ASTNodeConstNumber : public ASTNodeConst
 {
 	float m_value;
-	uint32_t constSlotIndex;
+	ExpressionSlotIndex constSlotIndex;
 
 public:
 	ASTNodeConstNumber(float _value)
 		: ASTNodeConst(eASTNodeType::VALUE_FLOAT)
 		, m_value(_value)
-		, constSlotIndex(UINT32_MAX)
+		, constSlotIndex(EXP_SLOT_INDEX_MAX)
 	{
 		m_ExprType = eExpType::NUMBER;
 	}
 
 	virtual void gatherConsts(ExpressionDataWriter& writer) override;
+	virtual ResultInfo getResultInfo() const override;
 
 	float value() const { return m_value; }
 };
@@ -174,18 +350,19 @@ public:
 class ASTNodeConstName : public ASTNodeConst
 {
 	Name m_value;
-	uint32_t constSlotIndex;
+	ExpressionSlotIndex constSlotIndex;
 
 public:
 	ASTNodeConstName(Name _value)
 		: ASTNodeConst(eASTNodeType::VALUE_NAME)
 		, m_value(_value)
-		, constSlotIndex(UINT32_MAX)
+		, constSlotIndex(EXP_SLOT_INDEX_MAX)
 	{
 		m_ExprType = eExpType::NAME;
 	}
 
 	virtual void gatherConsts(ExpressionDataWriter& writer) override;
+	virtual ResultInfo getResultInfo() const override;
 
 	Name value() const { return m_value; }
 };
@@ -203,6 +380,8 @@ public:
 		m_ExprType = eExpType::BOOL;
 	}
 
+	virtual ResultInfo getResultInfo() const override;
+
 	bool value() const { return m_value; }
 };
 
@@ -217,6 +396,7 @@ public:
 
 	virtual bool typeCheck(const VariableLayout& varLayout, ExpressionErrorReporter& reporter) override;
 	virtual bool constFoldThisNode(ASTNode **parentPointerToThis, ExpressionErrorReporter& reporter);
+	virtual void generateCode(ExpressionDataWriter& writer) override;
 };
 
 
@@ -229,6 +409,7 @@ public:
 
 	virtual bool typeCheck(const VariableLayout& varLayout, ExpressionErrorReporter& reporter) override;
 	virtual bool constFoldThisNode(ASTNode **parentPointerToThis, ExpressionErrorReporter& reporter);
+	virtual void generateCode(ExpressionDataWriter& writer) override;
 };
 
 
@@ -241,12 +422,14 @@ public:
 
 	virtual bool typeCheck(const VariableLayout& varLayout, ExpressionErrorReporter& reporter) override;
 	virtual bool constFoldThisNode(ASTNode **parentPointerToThis, ExpressionErrorReporter& reporter);
+	virtual void generateCode(ExpressionDataWriter& writer) override;
 };
 
 
 class ASTNodeID : public ASTNode
 {
 	const Name m_name;
+	ExpressionSlotIndex slotIndex;
 
 public:
 	ASTNodeID(const char *_name)
@@ -256,6 +439,8 @@ public:
 
 	virtual bool typeCheck(const VariableLayout& varLayout, ExpressionErrorReporter& reporter) override;
 	virtual bool isConstant() const override { return false; }
+	virtual void generateCode(ExpressionDataWriter& writer) override {}
+	virtual ResultInfo getResultInfo() const override;
 
 	Name name() const { return m_name; }
 };
@@ -364,6 +549,11 @@ void ASTNodeNonLeaf::allocateRegisters(uint32_t useRegister, uint32_t& maxRegist
 	}
 }
 
+ResultInfo ASTNodeNonLeaf::getResultInfo() const
+{
+	return ResultInfo(eResultSource::Register, resultRegister);
+}
+
 
 
 /*
@@ -403,7 +593,7 @@ bool ASTNodeLogic::constFoldThisNode(ASTNode **parentPointerToThis, ExpressionEr
 	if (nodeType() == eASTNodeType::LOGICAL_NOT && m_leftChild->isConstant())
 	{
 		assert(m_leftChild->exprType() == eExpType::BOOL);
-		const bool leftVal = reinterpret_cast<ASTNodeConstBool*>(m_leftChild)->value();
+		const bool leftVal = static_cast<ASTNodeConstBool*>(m_leftChild)->value();
 
 		*parentPointerToThis = createConstNode(!leftVal);
 	}
@@ -413,8 +603,8 @@ bool ASTNodeLogic::constFoldThisNode(ASTNode **parentPointerToThis, ExpressionEr
 		assert(m_leftChild->exprType() == eExpType::BOOL);
 		assert(m_rightChild && m_rightChild->exprType() == eExpType::BOOL);
 
-		const bool leftVal = m_leftChild->isConstant() ? reinterpret_cast<ASTNodeConstBool*>(m_leftChild)->value() : true;
-		const bool rightVal = m_rightChild->isConstant() ? reinterpret_cast<ASTNodeConstBool*>(m_rightChild)->value() : true;
+		const bool leftVal = m_leftChild->isConstant() ? static_cast<ASTNodeConstBool*>(m_leftChild)->value() : true;
+		const bool rightVal = m_rightChild->isConstant() ? static_cast<ASTNodeConstBool*>(m_rightChild)->value() : true;
 		
 		if (!(leftVal && rightVal))
 		{
@@ -437,8 +627,8 @@ bool ASTNodeLogic::constFoldThisNode(ASTNode **parentPointerToThis, ExpressionEr
 		assert(m_leftChild->exprType() == eExpType::BOOL);
 		assert(m_rightChild && m_rightChild->exprType() == eExpType::BOOL);
 
-		const bool leftVal = m_leftChild->isConstant() ? reinterpret_cast<ASTNodeConstBool*>(m_leftChild)->value() : false;
-		const bool rightVal = m_rightChild->isConstant() ? reinterpret_cast<ASTNodeConstBool*>(m_rightChild)->value() : false;
+		const bool leftVal = m_leftChild->isConstant() ? static_cast<ASTNodeConstBool*>(m_leftChild)->value() : false;
+		const bool rightVal = m_rightChild->isConstant() ? static_cast<ASTNodeConstBool*>(m_rightChild)->value() : false;
 		
 		if (leftVal || rightVal)
 		{
@@ -462,6 +652,27 @@ bool ASTNodeLogic::constFoldThisNode(ASTNode **parentPointerToThis, ExpressionEr
 	}
 
 	return true;
+}
+
+void ASTNodeLogic::generateCode(ExpressionDataWriter& writer)
+{
+	ResultInfo leftRI = m_leftChild->getResultInfo();
+	ResultInfo rightRI = m_rightChild ? m_rightChild->getResultInfo() : leftRI;
+
+	eSimpleOp simpleOp(eSimpleOp::UNINITIALISED);
+	switch (nodeType())
+	{
+	case eASTNodeType::LOGICAL_NOT:	simpleOp = eSimpleOp::NOT; break;
+	case eASTNodeType::LOGICAL_AND:	simpleOp = eSimpleOp::AND; break;
+	case eASTNodeType::LOGICAL_OR:	simpleOp = eSimpleOp::OR;  break;
+
+	default:
+		assert(false);
+	}
+
+	eEncOpcode encOp = encodeOp(simpleOp, leftRI.source, rightRI.source);
+
+	writer.emitInstr(encOp, resultRegister, leftRI.index, rightRI.index);
 }
 
 
@@ -597,6 +808,76 @@ bool ASTNodeComp::constFoldThisNode(ASTNode **parentPointerToThis, ExpressionErr
 	return true;
 }
 
+void ASTNodeComp::generateCode(ExpressionDataWriter& writer)
+{
+	ResultInfo leftRI = m_leftChild->getResultInfo();
+	ResultInfo rightRI = m_rightChild ? m_rightChild->getResultInfo() : leftRI;
+
+	eSimpleOp simpleOp(eSimpleOp::UNINITIALISED);
+
+	if (exprType() == eExpType::NUMBER)
+	{
+		eASTNodeType nt(nodeType());
+
+		if ((leftRI.source == eResultSource::Register && rightRI.source != eResultSource::Register) ||
+			(leftRI.source == eResultSource::Constant && rightRI.source == eResultSource::Variable))
+		{
+			std::swap(leftRI, rightRI);
+		
+			switch (nt)
+			{
+			case eASTNodeType::COMP_LT:		nt = eASTNodeType::COMP_GT;   break;
+			case eASTNodeType::COMP_LTEQ:	nt = eASTNodeType::COMP_GTEQ; break;
+			case eASTNodeType::COMP_GT:		nt = eASTNodeType::COMP_LT;   break;
+			case eASTNodeType::COMP_GTEQ:	nt = eASTNodeType::COMP_LTEQ; break;
+			}
+		}
+
+		switch (nt)
+		{
+		case eASTNodeType::COMP_EQ:		simpleOp = eSimpleOp::NUM_EQ;   break;
+		case eASTNodeType::COMP_NEQ:	simpleOp = eSimpleOp::NUM_NEQ;  break;
+		case eASTNodeType::COMP_LT:		simpleOp = eSimpleOp::NUM_LT;   break;
+		case eASTNodeType::COMP_LTEQ:	simpleOp = eSimpleOp::NUM_LTEQ; break;
+		case eASTNodeType::COMP_GT:		simpleOp = eSimpleOp::NUM_GT;   break;
+		case eASTNodeType::COMP_GTEQ:	simpleOp = eSimpleOp::NUM_GTEQ; break;
+
+		default:
+			assert(false);
+		}
+	}
+	else if (exprType() == eExpType::NAME)
+	{
+		switch (nodeType())
+		{
+		case eASTNodeType::COMP_EQ:		simpleOp = eSimpleOp::NAME_EQ;  break;
+		case eASTNodeType::COMP_NEQ:	simpleOp = eSimpleOp::NAME_NEQ; break;
+		
+		default:
+			assert(false);
+		}
+	}
+	else if (exprType() == eExpType::BOOL)
+	{
+		switch (nodeType())
+		{
+		case eASTNodeType::COMP_EQ:		simpleOp = eSimpleOp::BOOL_EQ; break;
+		case eASTNodeType::COMP_NEQ:	simpleOp = eSimpleOp::XOR;     break;
+		
+		default:
+			assert(false);
+		}
+	}
+	else
+	{
+		assert(false);
+	}
+
+	eEncOpcode encOp = encodeOp(simpleOp, leftRI.source, rightRI.source);
+
+	writer.emitInstr(encOp, resultRegister, leftRI.index, rightRI.index);
+}
+
 
 /*
  * ASTNodeArith
@@ -662,16 +943,53 @@ bool ASTNodeArith::constFoldThisNode(ASTNode **parentPointerToThis, ExpressionEr
 	return true;
 }
 
+void ASTNodeArith::generateCode(ExpressionDataWriter& writer)
+{
+	ResultInfo leftRI = m_leftChild->getResultInfo();
+	ResultInfo rightRI = m_rightChild ? m_rightChild->getResultInfo() : leftRI;
+
+	// swap left and right where necessary to account for reduced redundant instruction encodings
+	if (nodeType() == eASTNodeType::ARITH_ADD || nodeType() == eASTNodeType::ARITH_MUL)
+	{
+		if ((leftRI.source == eResultSource::Register && rightRI.source != eResultSource::Register) ||
+			(leftRI.source == eResultSource::Variable && rightRI.source == eResultSource::Constant))
+		{
+			std::swap(leftRI, rightRI);
+		}
+	}
+
+	eSimpleOp simpleOp(eSimpleOp::UNINITIALISED);
+	switch (nodeType())
+	{
+	case eASTNodeType::ARITH_ADD:	simpleOp = eSimpleOp::ADD; break;
+	case eASTNodeType::ARITH_SUB:	simpleOp = eSimpleOp::SUB; break;
+	case eASTNodeType::ARITH_MUL:	simpleOp = eSimpleOp::MUL; break;
+	case eASTNodeType::ARITH_DIV:	simpleOp = eSimpleOp::DIV; break;
+	case eASTNodeType::ARITH_MOD:	simpleOp = eSimpleOp::MOD; break;
+
+	default:
+		assert(false);
+	}
+
+	eEncOpcode encOp = encodeOp(simpleOp, leftRI.source, rightRI.source);
+
+	writer.emitInstr(encOp, resultRegister, leftRI.index, rightRI.index);
+}
+
 
 /*
  * ASTNodeConst
  *
  */
 
-
 void ASTNodeConstNumber::gatherConsts(ExpressionDataWriter& writer)
 {
 	constSlotIndex = writer.addNumericConst(value());
+}
+
+ResultInfo ASTNodeConstNumber::getResultInfo() const
+{
+	return ResultInfo(eResultSource::Constant, constSlotIndex);
 }
 
 void ASTNodeConstName::gatherConsts(ExpressionDataWriter& writer)
@@ -679,6 +997,15 @@ void ASTNodeConstName::gatherConsts(ExpressionDataWriter& writer)
 	constSlotIndex = writer.addNameConst(value());
 }
 
+ResultInfo ASTNodeConstName::getResultInfo() const
+{
+	return ResultInfo(eResultSource::Constant, constSlotIndex);
+}
+
+ResultInfo ASTNodeConstBool::getResultInfo() const
+{
+	return ResultInfo(eResultSource::Constant, 0);
+}
 
 
 /*
@@ -697,8 +1024,15 @@ bool ASTNodeID::typeCheck(const VariableLayout& varLayout, ExpressionErrorReport
 		return false;
 	}
 
+	slotIndex = varLayout.getIndex(m_name);
 	m_ExprType = varLayout.getType(m_name);
+
 	return true;
+}
+
+ResultInfo ASTNodeID::getResultInfo() const
+{
+	return ResultInfo(eResultSource::Variable, slotIndex);
 }
 
 
@@ -764,50 +1098,6 @@ void freeNode(ASTNode *node)
 }
 
 
-
-/*
- * VariableLayout
- *
- */
-
-namespace
-{
-	template<typename K, typename V>
-	bool KeyExists(const std::unordered_map<K, V>& map, const K& key)
-	{
-		auto it = map.find(key);
-		return it != map.end();
-	}
-}
-
-bool VariableLayout::variableExists(const Name& variableName) const
-{
-	return KeyExists(m_layout, variableName);
-}
-
-eExpType VariableLayout::getType(const Name& variableName) const
-{
-	auto it = m_layout.find(variableName);
-	if (it == m_layout.end())
-	{
-		return eExpType::UNINITIALISED;
-	}
-
-	return it->second.type;
-}
-
-int VariableLayout::getIndex(const Name& variableName) const
-{
-	auto it = m_layout.find(variableName);
-	if (it == m_layout.end())
-	{
-		return -1;
-	}
-
-	return it->second.index;
-}
-
-
 /*
  * ExpressionDataWriter
  */
@@ -825,37 +1115,41 @@ ExpressionDataWriter::~ExpressionDataWriter()
 	}
 }
 
-uint32_t ExpressionDataWriter::addNumericConst(float value)
+ExpressionSlotIndex ExpressionDataWriter::addNumericConst(float value)
 {
-	for (size_t i = 0; i < data->m_floats.size(); i++)
+	for (size_t i = 0; i < data->m_const_floats.size(); i++)
 	{
-		if (data->m_floats[i] == value)
+		if (data->m_const_floats[i] == value)
 		{
-			return (uint32_t)i;
+			return static_cast<ExpressionSlotIndex>(i);
 		}
 	}
 
-	data->m_floats.push_back(value);
-	return (uint32_t)data->m_floats.size()-1;
+	data->m_const_floats.push_back(value);
+	return static_cast<ExpressionSlotIndex>(data->m_const_floats.size()-1);
 }
 
-uint32_t ExpressionDataWriter::addNameConst(Name value)
+ExpressionSlotIndex ExpressionDataWriter::addNameConst(Name value)
 {
-	for (size_t i = 0; i < data->m_names.size(); i++)
+	for (size_t i = 0; i < data->m_const_names.size(); i++)
 	{
-		if (data->m_names[i] == value)
+		if (data->m_const_names[i] == value)
 		{
-			return (uint32_t)i;
+			return static_cast<ExpressionSlotIndex>(i);
 		}
 	}
 
-	data->m_names.push_back(value);
-	return (uint32_t)data->m_names.size()-1;
+	data->m_const_names.push_back(value);
+	return static_cast<ExpressionSlotIndex>(data->m_const_names.size()-1);
 }
 
-void ExpressionDataWriter::setMaxRegisterCount(uint32_t count)
+void ExpressionDataWriter::emitInstr(eEncOpcode opcode, ExpressionSlotIndex resultReg, ExpressionSlotIndex leftOperand, ExpressionSlotIndex rightOperand)
 {
-	maxRegisterCount = count;
+	uint32_t codeA = (static_cast<uint16_t>(opcode) << 16) | (resultReg & 0xffff);
+	uint32_t codeB = (leftOperand << 16) | (rightOperand & 0xffff);
+
+	data->m_byteCode.push_back(codeA);
+	data->m_byteCode.push_back(codeB);
 }
 
 ExpressionData* ExpressionDataWriter::getData()
@@ -864,4 +1158,259 @@ ExpressionData* ExpressionDataWriter::getData()
 	data = nullptr;
 
 	return tempData;
+}
+
+
+/*
+ * ExpressionEvaluator
+ *
+ */
+
+ExpressionEvaluator::ExpressionEvaluator(const VariablePack* _variables)
+	: variables(_variables)
+{}
+
+#define GET_LEFT_REG (reg[leftOp])
+#define GET_LEFT_REG_BOOL (reg[leftOp] != 0.f)
+#define GET_LEFT_NUM_VAR (variables->getVariableNumber(leftOp))
+#define GET_LEFT_NAME_VAR (variables->getVariableName(leftOp))
+#define GET_LEFT_NUM_CONST (exprData->m_const_floats[leftOp])
+#define GET_LEFT_NAME_CONST (exprData->m_const_names[leftOp])
+#define GET_RIGHT_REG (reg[rightOp])
+#define GET_RIGHT_REG_BOOL (reg[rightOp] != 0.f)
+#define GET_RIGHT_NUM_VAR (variables->getVariableNumber(rightOp))
+#define GET_RIGHT_NAME_VAR (variables->getVariableName(rightOp))
+#define GET_RIGHT_NUM_CONST (exprData->m_const_floats[rightOp])
+#define GET_RIGHT_NAME_CONST (exprData->m_const_names[rightOp])
+
+void ExpressionEvaluator::evaluate(const ExpressionData* exprData)
+{
+	assert(exprData);
+	assert(variables);
+
+	errorReport.reset();
+	resultType = exprData->resultType;
+
+	reg.resize(exprData->regCount, 0);
+
+	const uint32_t codeLen(exprData->m_byteCode.size());
+	assert((codeLen & 1) == 0);
+
+	for (uint32_t IP = 0; IP < codeLen; ++IP)
+	{
+		const uint32_t byteCodeA = exprData->m_byteCode[IP];
+		const uint32_t byteCodeB = exprData->m_byteCode[++IP];
+
+		const eEncOpcode op = static_cast<eEncOpcode>(byteCodeA >> 16);
+		const ExpressionSlotIndex leftOp = static_cast<ExpressionSlotIndex>(byteCodeB >> 16);
+		const ExpressionSlotIndex rightOp = static_cast<ExpressionSlotIndex>(byteCodeB & 0xffff);
+
+		float result;
+
+		switch (op)
+		{
+		case eEncOpcode::ADD:			result = GET_LEFT_REG + GET_RIGHT_REG; break;
+		case eEncOpcode::ADD_LC:		result = GET_LEFT_NUM_CONST + GET_RIGHT_REG; break;
+		case eEncOpcode::ADD_LC_RV:		result = GET_LEFT_NUM_CONST + GET_RIGHT_NUM_VAR; break;
+
+		case eEncOpcode::SUB:			result = GET_LEFT_REG - GET_RIGHT_REG; break;
+		case eEncOpcode::SUB_LC:		result = GET_LEFT_NUM_CONST - GET_RIGHT_REG; break;
+		case eEncOpcode::SUB_LV:		result = GET_LEFT_NUM_VAR - GET_RIGHT_REG; break;
+		case eEncOpcode::SUB_LC_RV:		result = GET_LEFT_NUM_CONST - GET_RIGHT_NUM_VAR; break;
+
+		case eEncOpcode::MUL:			result = GET_LEFT_REG * GET_RIGHT_REG; break;
+		case eEncOpcode::MUL_LC:		result = GET_LEFT_NUM_CONST * GET_RIGHT_REG; break;
+		case eEncOpcode::MUL_LC_RV:		result = GET_LEFT_NUM_CONST * GET_RIGHT_NUM_VAR; break;
+
+		case eEncOpcode::DIV:
+			{
+				const float right = GET_RIGHT_REG;
+				if (right == 0.f) { logDivideByZeroError(); return; }
+				result = GET_LEFT_REG / right; break;
+			}
+		case eEncOpcode::DIV_LC:
+			{
+				const float right = GET_RIGHT_REG;
+				if (right == 0.f) { logDivideByZeroError(); return; }
+				result = GET_LEFT_NUM_CONST / right; break;
+			}
+		case eEncOpcode::DIV_LV:
+			{
+				const float right = GET_RIGHT_REG;
+				if (right == 0.f) { logDivideByZeroError(); return; }
+				result = GET_LEFT_NUM_VAR / right; break;
+			}
+		case eEncOpcode::DIV_LC_RV:		result = GET_LEFT_NUM_CONST / GET_RIGHT_NUM_VAR; break;
+			{
+				const float right = GET_RIGHT_NUM_VAR;
+				if (right == 0.f) { logDivideByZeroError(); return; }
+				result = GET_LEFT_NUM_CONST / right; break;
+			}
+
+		case eEncOpcode::MOD:
+			{
+				const float right = GET_RIGHT_REG;
+				if (right == 0.f) { logDivideByZeroError(); return; }
+				result = fmodf(GET_LEFT_REG, right); break;
+			}
+		case eEncOpcode::MOD_LC:
+			{
+				const float right = GET_RIGHT_REG;
+				if (right == 0.f) { logDivideByZeroError(); return; }
+				result = fmodf(GET_LEFT_NUM_CONST, right); break;
+			}
+		case eEncOpcode::MOD_LV:
+			{
+				const float right = GET_RIGHT_REG;
+				if (right == 0.f) { logDivideByZeroError(); return; }
+				result = fmodf(GET_LEFT_NUM_VAR, right); break;
+			}
+		case eEncOpcode::MOD_LC_RV:
+			{
+				const float right = GET_RIGHT_NUM_VAR;
+				if (right == 0.f) { logDivideByZeroError(); return; }
+				result = fmodf(GET_LEFT_NUM_CONST, right); break;
+			}
+
+		// Logic (Boolean)
+		case eEncOpcode::AND:			result = GET_LEFT_REG_BOOL && GET_RIGHT_REG_BOOL ? 1.f : 0.f; break;
+		case eEncOpcode::OR:			result = GET_LEFT_REG_BOOL || GET_RIGHT_REG_BOOL ? 1.f : 0.f; break;
+		case eEncOpcode::XOR:			result = GET_LEFT_REG_BOOL ^ GET_RIGHT_REG_BOOL ? 1.f : 0.f; break;
+		case eEncOpcode::NOT:			result = !GET_LEFT_REG_BOOL ? 1.f : 0.f; break;
+
+		// Comparison (Names)
+		case eEncOpcode::NAME_EQ_LC_RV:  result = GET_LEFT_NAME_CONST == GET_RIGHT_NAME_VAR ? 1.f : 0.f; break;
+		case eEncOpcode::NAME_EQ_LV_RV:  result = GET_LEFT_NAME_VAR   == GET_RIGHT_NAME_VAR ? 1.f : 0.f; break;
+		case eEncOpcode::NAME_NEQ_LC_RV: result = GET_LEFT_NAME_CONST != GET_RIGHT_NAME_VAR ? 1.f : 0.f; break;
+		case eEncOpcode::NAME_NEQ_LV_RV: result = GET_LEFT_NAME_VAR   != GET_RIGHT_NAME_VAR ? 1.f : 0.f; break;
+
+		// Comparison (Boolean) [NEQ is handled by XOR]
+		case eEncOpcode::BOOL_EQ:        result = GET_LEFT_REG_BOOL == GET_RIGHT_REG_BOOL ? 1.f : 0.f; break;
+		
+		// Comparison (Numeric)
+		case eEncOpcode::NUM_EQ:		result = GET_LEFT_REG       == GET_RIGHT_REG ? 1.f : 0.f; break;
+		case eEncOpcode::NUM_EQ_LC:		result = GET_LEFT_NUM_CONST == GET_RIGHT_REG ? 1.f : 0.f; break;
+		case eEncOpcode::NUM_EQ_LV:		result = GET_LEFT_NUM_VAR   == GET_RIGHT_REG ? 1.f : 0.f; break;
+		case eEncOpcode::NUM_EQ_LV_RV:  result = GET_LEFT_NUM_VAR   == GET_RIGHT_NUM_VAR ? 1.f : 0.f; break;
+		case eEncOpcode::NUM_EQ_LV_RC:	result = GET_LEFT_NUM_VAR   == GET_RIGHT_NUM_CONST ? 1.f : 0.f; break;
+
+		case eEncOpcode::NUM_NEQ:		result = GET_LEFT_REG       != GET_RIGHT_REG ? 1.f : 0.f; break;
+		case eEncOpcode::NUM_NEQ_LC:	result = GET_LEFT_NUM_CONST != GET_RIGHT_REG ? 1.f : 0.f; break;
+		case eEncOpcode::NUM_NEQ_LV:	result = GET_LEFT_NUM_VAR   != GET_RIGHT_REG ? 1.f : 0.f; break;
+		case eEncOpcode::NUM_NEQ_LV_RV: result = GET_LEFT_NUM_VAR   != GET_RIGHT_NUM_VAR ? 1.f : 0.f; break;
+		case eEncOpcode::NUM_NEQ_LV_RC:	result = GET_LEFT_NUM_VAR   != GET_RIGHT_NUM_CONST ? 1.f : 0.f; break;
+
+		case eEncOpcode::NUM_LT:		result = GET_LEFT_REG       < GET_RIGHT_REG ? 1.f : 0.f; break;
+		case eEncOpcode::NUM_LT_LC:		result = GET_LEFT_NUM_CONST < GET_RIGHT_REG ? 1.f : 0.f; break;
+		case eEncOpcode::NUM_LT_LV:		result = GET_LEFT_NUM_VAR   < GET_RIGHT_REG ? 1.f : 0.f; break;
+		case eEncOpcode::NUM_LT_LV_RV:	result = GET_LEFT_NUM_VAR   < GET_RIGHT_NUM_VAR ? 1.f : 0.f; break;
+		case eEncOpcode::NUM_LT_LV_RC:	result = GET_LEFT_NUM_VAR   < GET_RIGHT_NUM_CONST ? 1.f : 0.f; break;
+
+		case eEncOpcode::NUM_GT:		result = GET_LEFT_REG       > GET_RIGHT_REG ? 1.f : 0.f; break;
+		case eEncOpcode::NUM_GT_LC:		result = GET_LEFT_NUM_CONST > GET_RIGHT_REG ? 1.f : 0.f; break;
+		case eEncOpcode::NUM_GT_LV:		result = GET_LEFT_NUM_VAR   > GET_RIGHT_REG ? 1.f : 0.f; break;
+		case eEncOpcode::NUM_GT_LV_RV:	result = GET_LEFT_NUM_VAR   > GET_RIGHT_NUM_VAR ? 1.f : 0.f; break;
+		case eEncOpcode::NUM_GT_LV_RC:	result = GET_LEFT_NUM_VAR   > GET_RIGHT_NUM_CONST ? 1.f : 0.f; break;
+
+		case eEncOpcode::NUM_LTEQ:			result = GET_LEFT_REG       <= GET_RIGHT_REG ? 1.f : 0.f; break;
+		case eEncOpcode::NUM_LTEQ_LC:		result = GET_LEFT_NUM_CONST <= GET_RIGHT_REG ? 1.f : 0.f; break;
+		case eEncOpcode::NUM_LTEQ_LV:		result = GET_LEFT_NUM_VAR   <= GET_RIGHT_REG ? 1.f : 0.f; break;
+		case eEncOpcode::NUM_LTEQ_LV_RV:	result = GET_LEFT_NUM_VAR   <= GET_RIGHT_NUM_VAR ? 1.f : 0.f; break;
+		case eEncOpcode::NUM_LTEQ_LV_RC:	result = GET_LEFT_NUM_VAR   <= GET_RIGHT_NUM_CONST ? 1.f : 0.f; break;
+
+		case eEncOpcode::NUM_GTEQ:			result = GET_LEFT_REG       >= GET_RIGHT_REG ? 1.f : 0.f; break;
+		case eEncOpcode::NUM_GTEQ_LC:		result = GET_LEFT_NUM_CONST >= GET_RIGHT_REG ? 1.f : 0.f; break;
+		case eEncOpcode::NUM_GTEQ_LV:		result = GET_LEFT_NUM_VAR   >= GET_RIGHT_REG ? 1.f : 0.f; break;
+		case eEncOpcode::NUM_GTEQ_LV_RV:	result = GET_LEFT_NUM_VAR   >= GET_RIGHT_NUM_VAR ? 1.f : 0.f; break;
+		case eEncOpcode::NUM_GTEQ_LV_RC:	result = GET_LEFT_NUM_VAR   >= GET_RIGHT_NUM_CONST ? 1.f : 0.f; break;
+
+		default:
+			assert(false);
+			return;
+		}	
+
+		const ExpressionSlotIndex outReg = static_cast<ExpressionSlotIndex>(byteCodeA & 0xffff);
+		reg[outReg] = result;
+	}
+}
+
+void ExpressionEvaluator::logDivideByZeroError()
+{
+	errorReport.addError(eErrorCategory::Math, eErrorCode::DivideByZero, "Divide by zero error");
+}
+
+
+/*
+ * ExpressionCompiler
+ *
+ */
+
+#include "GeneratedFiles/FormulaParser.h"
+#include "GeneratedFiles/FormulaLexer.h"
+
+int yyparse(ASTNode **expression, yyscan_t scanner);
+
+
+ExpressionCompiler::ExpressionCompiler(const VariableLayout* _layout)
+	: layout(_layout)
+{
+	assert(layout != nullptr);
+}
+
+ExpressionData* ExpressionCompiler::compile(const char* expressionText)
+{
+	// parse the expression
+	ASTNode *expression(nullptr);
+    yyscan_t scanner;
+    YY_BUFFER_STATE state;
+ 
+    if (yylex_init(&scanner)) 
+	{
+        // couldn't initialize
+		errorReport.addError(eErrorCategory::Internal, eErrorCode::InternalError, "Couldn't initialise parser");
+
+        return nullptr;
+    }
+ 
+    state = yy_scan_string(expressionText, scanner);
+ 
+    if (yyparse(&expression, scanner))
+	{
+        // error parsing
+		errorReport.addError(eErrorCategory::Syntax, eErrorCode::SyntaxError, "Syntax error");
+    
+		yy_delete_buffer(state, scanner);
+		yylex_destroy(scanner);
+
+        return nullptr;
+    }
+ 
+    yy_delete_buffer(state, scanner);
+    yylex_destroy(scanner);
+
+	assert(expression != nullptr);
+
+	// perform AST passes
+	if (!expression->typeCheck(*layout, errorReport) ||
+		!expression->constFold(&expression, errorReport))
+	{
+		freeNode(expression);
+		return false;
+	}
+
+	ExpressionDataWriter expWriter;
+
+	expression->gatherConsts(expWriter);
+	uint32_t maxRegisterCount(0);
+	expression->allocateRegisters(0, maxRegisterCount);
+	expression->generateCode(expWriter);
+
+	// get generated program data and add remaining params
+	ExpressionData *expData = expWriter.getData();
+	assert(expData != nullptr);
+
+	expData->regCount = maxRegisterCount;
+	expData->resultType = expression->exprType();
+
+	return expData;
 }

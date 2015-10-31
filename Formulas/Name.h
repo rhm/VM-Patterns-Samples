@@ -43,18 +43,22 @@ public:
 		return *this;
 	}
 
-	bool operator==(const Name& rhs) const
-	{
-		return p == rhs.p;
-	}
-
-	bool operator!=(const Name& rhs) const
-	{
-		return p != rhs.p;
-	}
+	friend bool operator==(const Name& lhs, const Name& rhs);
+	friend bool operator!=(const Name& lhs, const Name& rhs);
 
 	const char *c_str() const { return p; }
 };
+
+inline bool operator==(const Name& lhs, const Name& rhs)
+{
+	return lhs.p == rhs.p;
+}
+
+inline bool operator!=(const Name& lhs, const Name& rhs)
+{
+	return lhs.p != rhs.p;
+}
+
 
 namespace std
 {
