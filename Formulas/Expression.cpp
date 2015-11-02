@@ -1099,6 +1099,43 @@ void freeNode(ASTNode *node)
 
 
 /*
+ * VariableLayout
+ *
+ */
+
+ExpressionSlotIndex VariableLayout::addVariable(Name name, eExpType type)
+{
+	if (variableExists(name))
+	{
+		assert(getType(name) == type);
+		return getIndex(name);
+	}
+
+	ExpressionSlotIndex slotIndex(0);
+
+	if (type == eExpType::NUMBER)
+	{
+		slotIndex = numberCount;
+		numberCount += 1;
+	}
+	else if (type == eExpType::NAME)
+	{
+		slotIndex = nameCount;
+		nameCount += 1;
+	}
+	else
+	{
+		// bool variables not allowed
+		assert(false);
+		return 0;
+	}
+
+	m_layout.emplace(name, Info(type, slotIndex));
+	return slotIndex;
+}
+
+
+/*
  * ExpressionDataWriter
  */
 

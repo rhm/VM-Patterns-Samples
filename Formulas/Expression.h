@@ -48,6 +48,8 @@ public:
 	{
 		eExpType type;
 		ExpressionSlotIndex index;
+
+		Info(eExpType _type, ExpressionSlotIndex _index) : type(_type), index(_index) {}
 	};
 
 private:
