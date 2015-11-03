@@ -474,7 +474,7 @@ static yyconst flex_int16_t yy_chk[80] =
 
 #include <stdio.h>
 
-const char *copyString(const char *start, size_t len); 
+char *copyString(const char *start, size_t len); 
 
 #define YY_NO_UNISTD_H 1
 #line 481 "GeneratedFiles/FormulaLexer.c"
@@ -2086,11 +2086,11 @@ int yyerror(const char *msg) {
     fprintf(stderr,"Error:%s\n",msg); return 0;
 }
 
-const char *copyString(const char *start, size_t len)
+char *copyString(const char *start, size_t len)
 {
 	char *result = (char*)malloc(len + 1);
 	memcpy(result, start, len);
-	result[len+1] = 0;
+	result[len] = 0;
 	return result;
 }
 

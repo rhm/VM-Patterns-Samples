@@ -91,7 +91,7 @@ typedef union YYSTYPE
 #line 37 "FormulaParser.y"
 
     float f_value;
-	const char *n_value;
+	char *n_value;
     ASTNode *expression;
 
 

@@ -1438,15 +1438,15 @@ ExpressionData* ExpressionCompiler::compile(const char* expressionText)
 	ExpressionDataWriter expWriter;
 
 	expression->gatherConsts(expWriter);
-	uint32_t maxRegisterCount(0);
-	expression->allocateRegisters(0, maxRegisterCount);
+	uint32_t maxRegister(0);
+	expression->allocateRegisters(0, maxRegister);
 	expression->generateCode(expWriter);
 
 	// get generated program data and add remaining params
 	ExpressionData *expData = expWriter.getData();
 	assert(expData != nullptr);
 
-	expData->regCount = maxRegisterCount;
+	expData->regCount = maxRegister + 1;
 	expData->resultType = expression->exprType();
 
 	return expData;

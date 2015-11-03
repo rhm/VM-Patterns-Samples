@@ -36,7 +36,7 @@ typedef void* yyscan_t;
 
 %union {
     float f_value;
-	const char *n_value;
+	char *n_value;
     ASTNode *expression;
 }
 
@@ -84,8 +84,8 @@ expr
 	| expr TOKEN_GTEQ expr		{ $$ = createNode( eASTNodeType::COMP_GTEQ, $1, $3 ); }
     | TOKEN_LPAREN expr TOKEN_RPAREN { $$ = $2; }
     | TOKEN_NUMBER				{ $$ = createConstNode($1); }
-	| TOKEN_NAME				{ $$ = createConstNode($1); }
-	| TOKEN_ID					{ $$ = createIDNode($1); }
+	| TOKEN_NAME				{ $$ = createConstNode($1); free((void*)$1); }
+	| TOKEN_ID					{ $$ = createIDNode($1); free((void*)$1); }
 	| TOKEN_TRUE				{ $$ = createConstNode(true); }
 	| TOKEN_FALSE				{ $$ = createConstNode(false); }
 	;

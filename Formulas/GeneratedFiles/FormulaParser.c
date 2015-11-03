@@ -168,7 +168,7 @@ typedef union YYSTYPE
 #line 37 "FormulaParser.y"
 
     float f_value;
-	const char *n_value;
+	char *n_value;
     ASTNode *expression;
 
 
@@ -1556,14 +1556,14 @@ yyreduce:
 
 /* Line 1455 of yacc.c  */
 #line 87 "FormulaParser.y"
-    { (yyval.expression) = createConstNode((yyvsp[(1) - (1)].n_value)); ;}
+    { (yyval.expression) = createConstNode((yyvsp[(1) - (1)].n_value)); free((void*)(yyvsp[(1) - (1)].n_value)); ;}
     break;
 
   case 21:
 
 /* Line 1455 of yacc.c  */
 #line 88 "FormulaParser.y"
-    { (yyval.expression) = createIDNode((yyvsp[(1) - (1)].n_value)); ;}
+    { (yyval.expression) = createIDNode((yyvsp[(1) - (1)].n_value)); free((void*)(yyvsp[(1) - (1)].n_value)); ;}
     break;
 
   case 22:

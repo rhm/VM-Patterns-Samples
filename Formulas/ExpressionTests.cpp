@@ -28,7 +28,8 @@ protected:
 void CompileTests::compile(const char* expressionText)
 {
 	ExpressionCompiler comp(&layout);
-	comp.compile(expressionText);
+	ExpressionData *expData = comp.compile(expressionText);
+	delete expData;
 
 	if (comp.errors().errorCount() > 0) 
 		fail("Parse error");
