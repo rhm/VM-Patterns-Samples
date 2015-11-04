@@ -590,59 +590,66 @@ bool ASTNodeLogic::typeCheck(const VariableLayout& varLayout, ExpressionErrorRep
 
 bool ASTNodeLogic::constFoldThisNode(ASTNode **parentPointerToThis, ExpressionErrorReporter& reporter)
 {
-	if (nodeType() == eASTNodeType::LOGICAL_NOT && m_leftChild->isConstant())
+	if (nodeType() == eASTNodeType::LOGICAL_NOT)
 	{
-		assert(m_leftChild->exprType() == eExpType::BOOL);
-		const bool leftVal = static_cast<ASTNodeConstBool*>(m_leftChild)->value();
+		if (m_leftChild->isConstant())
+		{
+			assert(m_leftChild->exprType() == eExpType::BOOL);
+			const bool leftVal = static_cast<ASTNodeConstBool*>(m_leftChild)->value();
 
-		*parentPointerToThis = createConstNode(!leftVal);
-	}
-	else if (nodeType() == eASTNodeType::LOGICAL_AND &&
-			 (m_leftChild->isConstant() || m_rightChild->isConstant()))
-	{
-		assert(m_leftChild->exprType() == eExpType::BOOL);
-		assert(m_rightChild && m_rightChild->exprType() == eExpType::BOOL);
-
-		const bool leftVal = m_leftChild->isConstant() ? static_cast<ASTNodeConstBool*>(m_leftChild)->value() : true;
-		const bool rightVal = m_rightChild->isConstant() ? static_cast<ASTNodeConstBool*>(m_rightChild)->value() : true;
-		
-		if (!(leftVal && rightVal))
-		{
-			*parentPointerToThis = createConstNode(false);
-		}
-		else if (m_leftChild->isConstant())
-		{
-			*parentPointerToThis = m_rightChild;
-			m_rightChild = nullptr;
-		}
-		else
-		{
-			*parentPointerToThis = m_leftChild;
-			m_leftChild = nullptr;
+			*parentPointerToThis = createConstNode(!leftVal);
 		}
 	}
-	else if (nodeType() == eASTNodeType::LOGICAL_OR &&
-			 (m_leftChild->isConstant() || m_rightChild->isConstant()))
+	else if (nodeType() == eASTNodeType::LOGICAL_AND)
 	{
-		assert(m_leftChild->exprType() == eExpType::BOOL);
-		assert(m_rightChild && m_rightChild->exprType() == eExpType::BOOL);
+		if (m_leftChild->isConstant() || m_rightChild->isConstant())
+		{
+			assert(m_leftChild->exprType() == eExpType::BOOL);
+			assert(m_rightChild && m_rightChild->exprType() == eExpType::BOOL);
 
-		const bool leftVal = m_leftChild->isConstant() ? static_cast<ASTNodeConstBool*>(m_leftChild)->value() : false;
-		const bool rightVal = m_rightChild->isConstant() ? static_cast<ASTNodeConstBool*>(m_rightChild)->value() : false;
-		
-		if (leftVal || rightVal)
-		{
-			*parentPointerToThis = createConstNode(true);
+			const bool leftVal = m_leftChild->isConstant() ? static_cast<ASTNodeConstBool*>(m_leftChild)->value() : true;
+			const bool rightVal = m_rightChild->isConstant() ? static_cast<ASTNodeConstBool*>(m_rightChild)->value() : true;
+
+			if (!(leftVal && rightVal))
+			{
+				*parentPointerToThis = createConstNode(false);
+			}
+			else if (m_leftChild->isConstant())
+			{
+				*parentPointerToThis = m_rightChild;
+				m_rightChild = nullptr;
+			}
+			else
+			{
+				*parentPointerToThis = m_leftChild;
+				m_leftChild = nullptr;
+			}
 		}
-		else if (m_leftChild->isConstant())
+	}
+	else if (nodeType() == eASTNodeType::LOGICAL_OR)
+	{
+		if (m_leftChild->isConstant() || m_rightChild->isConstant())
 		{
-			*parentPointerToThis = m_rightChild;
-			m_rightChild = nullptr;
-		}
-		else
-		{
-			*parentPointerToThis = m_leftChild;
-			m_leftChild = nullptr;
+			assert(m_leftChild->exprType() == eExpType::BOOL);
+			assert(m_rightChild && m_rightChild->exprType() == eExpType::BOOL);
+
+			const bool leftVal = m_leftChild->isConstant() ? static_cast<ASTNodeConstBool*>(m_leftChild)->value() : false;
+			const bool rightVal = m_rightChild->isConstant() ? static_cast<ASTNodeConstBool*>(m_rightChild)->value() : false;
+
+			if (leftVal || rightVal)
+			{
+				*parentPointerToThis = createConstNode(true);
+			}
+			else if (m_leftChild->isConstant())
+			{
+				*parentPointerToThis = m_rightChild;
+				m_rightChild = nullptr;
+			}
+			else
+			{
+				*parentPointerToThis = m_leftChild;
+				m_leftChild = nullptr;
+			}
 		}
 	}
 	else
@@ -688,7 +695,7 @@ bool ASTNodeComp::typeCheck(const VariableLayout& varLayout, ExpressionErrorRepo
 
 	m_ExprType = eExpType::BOOL;
 
-	if (m_leftChild->exprType() == m_rightChild->exprType())
+	if (m_leftChild->exprType() != m_rightChild->exprType())
 	{
 		std::ostringstream msg;
 		msg << "Both sides of " << getOperatorAsString() << " must be the same type";
@@ -723,15 +730,14 @@ bool ASTNodeComp::constFoldThisNode(ASTNode **parentPointerToThis, ExpressionErr
 {
 	if (m_leftChild->isConstant() && m_rightChild->isConstant())
 	{
-		switch (exprType())
+		assert(m_leftChild->exprType() == m_rightChild->exprType());
+
+		switch (m_leftChild->exprType())
 		{
 		case eExpType::BOOL:
 			{
-				assert(m_leftChild->exprType() == eExpType::BOOL);
-				assert(m_rightChild->exprType() == eExpType::BOOL);
-				
-				const bool leftVal = reinterpret_cast<ASTNodeConstBool*>(m_leftChild)->value();
-				const bool rightVal = reinterpret_cast<ASTNodeConstBool*>(m_rightChild)->value();
+				const bool leftVal = static_cast<ASTNodeConstBool*>(m_leftChild)->value();
+				const bool rightVal = static_cast<ASTNodeConstBool*>(m_rightChild)->value();
 				bool newVal(false);
 
 				switch (nodeType())
@@ -750,11 +756,8 @@ bool ASTNodeComp::constFoldThisNode(ASTNode **parentPointerToThis, ExpressionErr
 
 		case eExpType::NAME:
 			{
-				assert(m_leftChild->exprType() == eExpType::NAME);
-				assert(m_rightChild->exprType() == eExpType::NAME);
-				
-				const Name leftVal = reinterpret_cast<ASTNodeConstName*>(m_leftChild)->value();
-				const Name rightVal = reinterpret_cast<ASTNodeConstName*>(m_rightChild)->value();
+				const Name leftVal = static_cast<ASTNodeConstName*>(m_leftChild)->value();
+				const Name rightVal = static_cast<ASTNodeConstName*>(m_rightChild)->value();
 				bool newVal(false);
 
 				switch (nodeType())
@@ -773,11 +776,8 @@ bool ASTNodeComp::constFoldThisNode(ASTNode **parentPointerToThis, ExpressionErr
 
 		case eExpType::NUMBER:
 			{
-				assert(m_leftChild->exprType() == eExpType::NUMBER);
-				assert(m_rightChild->exprType() == eExpType::NUMBER);
-				
-				const float leftVal = reinterpret_cast<ASTNodeConstNumber*>(m_leftChild)->value();
-				const float rightVal = reinterpret_cast<ASTNodeConstNumber*>(m_rightChild)->value();
+				const float leftVal = static_cast<ASTNodeConstNumber*>(m_leftChild)->value();
+				const float rightVal = static_cast<ASTNodeConstNumber*>(m_rightChild)->value();
 				bool newVal(false);
 
 				switch (nodeType())

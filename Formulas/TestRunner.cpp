@@ -18,37 +18,52 @@ TestFixture::TestFixture()
 	: failed(false)
 {}
 
+void TestFixture::logTestStart()
+{
+	std::cout << "Beginning test: " << testName << std::endl;
+}
+
+void TestFixture::logTestFail(const char* messageText, size_t line, const char* functionName, const char* fileName)
+{
+	std::cout << 
+		"Error: " << messageText << 
+		"; file=" << fileName << 
+		"; function=" << functionName <<
+		"; line=" << line <<
+		std::endl;
+}
+
+void TestFixture::logTestEnd()
+{
+	std::cout << "End test: " << (didFail() ? "FAILED" : "PASSED") << std::endl;
+}
+
 bool TestFixture::ensure(bool condition, const char* condText, size_t line, const char* functionName, const char* fileName)
 {
 	if (!condition)
 	{
 		failed = true;
-
-		std::cout << 
-			"Error: " << condText << 
-			"; file=" << fileName << 
-			"; function=" << functionName <<
-			"; line=" << line;
+		logTestFail(condText, line, functionName, fileName);
 	}
 
 	return condition;
 }
 
-void TestFixture::fail(const char* message)
+void TestFixture::genericFail(const char *message, size_t line, const char* functionName, const char* fileName)
 {
 	failed = true;
-	std::cout << "Error: " << message;
+	logTestFail(message, line, functionName, fileName);
 }
 
 void TestFixture::runTest()
 {
-	std::cout << "Beginning test: " << testName << std::endl;
+	logTestStart();
 
 	setupFixture();
 	test();
 	tearDownFixture();
 
-	std::cout << std::endl;
+	logTestEnd();
 }
 
 void TestFixture::setName(const char* name)

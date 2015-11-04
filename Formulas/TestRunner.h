@@ -13,8 +13,12 @@ class TestFixture
 	const char* testName;
 
 protected:
+	void logTestStart();
+	void logTestFail(const char* messageText, size_t line, const char* functionName, const char* fileName);
+	void logTestEnd();
+
 	bool ensure(bool condition, const char* condText, size_t line, const char* functionName, const char* fileName);
-	void fail(const char *message);
+	void genericFail(const char *message, size_t line, const char* functionName, const char* fileName);
 
 	virtual void setupFixture() {}
 	virtual void test() = 0;
