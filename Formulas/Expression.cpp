@@ -217,7 +217,27 @@ enum class eEncOpcode : uint16_t
 
 inline eEncOpcode encodeOp(eSimpleOp simpleOp, eResultSource leftSource, eResultSource rightSource)
 {
-	return static_cast<eEncOpcode>(OPCODE(static_cast<uint8_t>(simpleOp), static_cast<uint8_t>(leftSource), static_cast<uint8_t>(rightSource)));
+	uint8_t left, right;
+
+	switch (leftSource)
+	{
+	case eResultSource::Register: left = LEFT_REG_BITS; break;
+	case eResultSource::Constant: left = LEFT_CONST_BITS; break;
+	case eResultSource::Variable: left = LEFT_VAR_BITS; break;
+	default:
+		assert(false); break;
+	}
+
+	switch (rightSource)
+	{
+	case eResultSource::Register: right = RIGHT_REG_BITS; break;
+	case eResultSource::Constant: right = RIGHT_CONST_BITS; break;
+	case eResultSource::Variable: right = RIGHT_VAR_BITS; break;
+	default:
+		assert(false); break;
+	}
+
+	return static_cast<eEncOpcode>(OPCODE(static_cast<uint8_t>(simpleOp), left, right));
 }
 
 
@@ -815,7 +835,7 @@ void ASTNodeComp::generateCode(ExpressionDataWriter& writer)
 
 	eSimpleOp simpleOp(eSimpleOp::UNINITIALISED);
 
-	if (exprType() == eExpType::NUMBER)
+	if (m_leftChild->exprType() == eExpType::NUMBER)
 	{
 		eASTNodeType nt(nodeType());
 
@@ -846,7 +866,7 @@ void ASTNodeComp::generateCode(ExpressionDataWriter& writer)
 			assert(false);
 		}
 	}
-	else if (exprType() == eExpType::NAME)
+	else if (m_leftChild->exprType() == eExpType::NAME)
 	{
 		switch (nodeType())
 		{
@@ -857,7 +877,7 @@ void ASTNodeComp::generateCode(ExpressionDataWriter& writer)
 			assert(false);
 		}
 	}
-	else if (exprType() == eExpType::BOOL)
+	else if (m_leftChild->exprType() == eExpType::BOOL)
 	{
 		switch (nodeType())
 		{
