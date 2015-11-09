@@ -28,9 +28,9 @@ WS          [ \r\n\t]*
 
 [0-9]+ |
 [0-9]+"."[0-9]* |
-"."[0-9]+     { sscanf_s(yytext, "%f", &yylval->f_value); return TOKEN_NUMBER; }
+"."[0-9]+       { sscanf_s(yytext, "%f", &yylval->f_value); return TOKEN_NUMBER; }
 
-\".*\"			{ yylval->n_value = copyString(yytext+1, yyleng-1); return TOKEN_NAME; }
+\'.*\'			{ yylval->n_value = copyString(yytext+1, yyleng-1); return TOKEN_NAME; }
 
 [a-zA-Z]+[a-zA-Z0-9_]*	{ yylval->n_value = copyString(yytext, yyleng); return TOKEN_ID; }
 

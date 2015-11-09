@@ -26,10 +26,10 @@ void TestFixture::logTestStart()
 void TestFixture::logTestFail(const char* messageText, size_t line, const char* functionName, const char* fileName)
 {
 	std::cout << 
-		"Error: " << messageText << 
-		"; file=" << fileName << 
-		"; function=" << functionName <<
-		"; line=" << line <<
+		"Error: " << messageText << std::endl <<
+		"    file=" << fileName << std::endl <<
+		"    function=" << functionName << std::endl <<
+		"    line=" << line << std::endl <<
 		std::endl;
 }
 

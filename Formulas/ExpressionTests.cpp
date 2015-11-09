@@ -55,8 +55,10 @@ void ExpressionTestBase::setupFixture()
 {
 	layout.addVariable(Name("NumA"), eExpType::NUMBER);
 	layout.addVariable(Name("NumB"), eExpType::NUMBER);
+	layout.addVariable(Name("NumC"), eExpType::NUMBER);
 
 	layout.addVariable(Name("NameC"), eExpType::NAME);
+	layout.addVariable(Name("NameC2"), eExpType::NAME);
 	layout.addVariable(Name("NameD"), eExpType::NAME);
 }
 
@@ -119,8 +121,10 @@ void ExecutionTests::setupFixture()
 
 	vars->setVariable(Name("NumA"), 5.f);
 	vars->setVariable(Name("NumB"), -3.f);
+	vars->setVariable(Name("NumC"), 2.f);
 
 	vars->setVariable(Name("NameC"), Name("C"));
+	vars->setVariable(Name("NameC2"), Name("C"));
 	vars->setVariable(Name("NameD"), Name("D"));
 }
 
@@ -199,10 +203,217 @@ void ExecutionTests::executeBool(const char* expressionText, size_t line, const 
 
 void ExecutionTests::test()
 {
-	//TEST_EXPRESSION_NUM("4+7", 11);
+	// Arithmetic
+
+	TEST_EXPRESSION_NUM("2+4.5", 6.5);
+	TEST_EXPRESSION_NUM("2+NumA", 7);
+	TEST_EXPRESSION_NUM("NumA+4.5", 9.5);
+	TEST_EXPRESSION_NUM("NumA+NumB", 2);
+
+	TEST_EXPRESSION_NUM("10-7.5-2.5", 0);
+	TEST_EXPRESSION_NUM("-4-5", -9);
+	TEST_EXPRESSION_NUM("4+-3", 1);
+	TEST_EXPRESSION_NUM("4--3", 7);
+
+	TEST_EXPRESSION_NUM("4-NumA", -1);
+	TEST_EXPRESSION_NUM("4-NumB", 7);
+	TEST_EXPRESSION_NUM("NumA-NumB", 8);
+	TEST_EXPRESSION_NUM("NumA--3", 8);
+	
+	TEST_EXPRESSION_NUM("4*2", 8);
+	TEST_EXPRESSION_NUM("4*NumA", 20);
+	TEST_EXPRESSION_NUM("NumA*2", 10);
+	TEST_EXPRESSION_NUM("NumA*NumB", -15);
+
+	TEST_EXPRESSION_NUM("4*3*2", 24);
+	TEST_EXPRESSION_NUM("-3*2", -6);
+	TEST_EXPRESSION_NUM("5*-2", -10);
+
+	TEST_EXPRESSION_NUM("NumA/2", 2.5);
+	TEST_EXPRESSION_NUM("10/NumA", 2);
+	TEST_EXPRESSION_NUM("NumA/NumC", 5);
+	TEST_EXPRESSION_NUM("10/-2", -5);
+	TEST_EXPRESSION_NUM("-10/2", -5);
+	TEST_EXPRESSION_NUM("-10/-2", 5);
+
+	TEST_EXPRESSION_NUM("12 % 5", 2);
+	TEST_EXPRESSION_NUM("NumA % 2", 1);
+	TEST_EXPRESSION_NUM("12 % NumA", 2);
+	TEST_EXPRESSION_NUM("NumA % NumC", 1);
+	TEST_EXPRESSION_NUM("-12 %5", -2);
+	TEST_EXPRESSION_NUM("12 % -5", -2);
+	TEST_EXPRESSION_NUM("-12%-5", 2);
+
+
+	// Numeric comparison
 
 	TEST_EXPRESSION_BOOL("NumA == 5", true);
-	TEST_EXPRESSION_BOOL("NumA < 3.5", false);
+	TEST_EXPRESSION_BOOL("5==NumA", true);
+	TEST_EXPRESSION_BOOL("5==5", true);
+	TEST_EXPRESSION_BOOL("5 == 10/2", true);
+	TEST_EXPRESSION_BOOL("10/2 ==5", true);
+	TEST_EXPRESSION_BOOL("NumA == 10/2", true);
+	TEST_EXPRESSION_BOOL("10/2 == NumA", true);
+
+	TEST_EXPRESSION_BOOL("NumB == 5", false);
+	TEST_EXPRESSION_BOOL("5==NumB", false);
+	TEST_EXPRESSION_BOOL("5==88", false);
+	TEST_EXPRESSION_BOOL("88 == 10/2", false);
+	TEST_EXPRESSION_BOOL("10/2 ==88", false);
+	TEST_EXPRESSION_BOOL("NumB == 10/2", false);
+	TEST_EXPRESSION_BOOL("10/2 == NumB", false);
+
+	TEST_EXPRESSION_BOOL("NumB != 5", true);
+	TEST_EXPRESSION_BOOL("5!=NumB", true);
+	TEST_EXPRESSION_BOOL("5!=88", true);
+	TEST_EXPRESSION_BOOL("88 != 10/2", true);
+	TEST_EXPRESSION_BOOL("10/2 !=88", true);
+	TEST_EXPRESSION_BOOL("NumB != 10/2", true);
+	TEST_EXPRESSION_BOOL("10/2 != NumB", true);
+
+	TEST_EXPRESSION_BOOL("NumA != 5", false);
+	TEST_EXPRESSION_BOOL("5!=NumA", false);
+	TEST_EXPRESSION_BOOL("5!=5", false);
+	TEST_EXPRESSION_BOOL("5 != 10/2", false);
+	TEST_EXPRESSION_BOOL("10/2 !=5", false);
+	TEST_EXPRESSION_BOOL("NumA != 10/2", false);
+	TEST_EXPRESSION_BOOL("10/2 != NumA", false);
+
+	TEST_EXPRESSION_BOOL("NumA < 7", true);
+	TEST_EXPRESSION_BOOL("3 < NumA", true);
+	TEST_EXPRESSION_BOOL("3 < 5", true);
+	TEST_EXPRESSION_BOOL("3 < 2*3", true);
+	TEST_EXPRESSION_BOOL("20/2 < 5", true);
+	TEST_EXPRESSION_BOOL("20/2 < NumA", true);
+	TEST_EXPRESSION_BOOL("NumA < 2*3", true);
+
+	TEST_EXPRESSION_BOOL("NumA < 3", false);
+	TEST_EXPRESSION_BOOL("5 < NumA", false);
+	TEST_EXPRESSION_BOOL("5 < 5", false);
+	TEST_EXPRESSION_BOOL("10 < 2*3", false);
+	TEST_EXPRESSION_BOOL("20/2 < 1", false);
+	TEST_EXPRESSION_BOOL("20/2 < NumA", false);
+	TEST_EXPRESSION_BOOL("NumA < 1+3", false);
+
+	TEST_EXPRESSION_BOOL("NumA <= 7", true);
+	TEST_EXPRESSION_BOOL("NumA <= 5", true);
+	TEST_EXPRESSION_BOOL("3 <= NumA", true);
+	TEST_EXPRESSION_BOOL("5 <= NumA", true);
+	TEST_EXPRESSION_BOOL("3 <= 5", true);
+	TEST_EXPRESSION_BOOL("5 <= 5", true);
+	TEST_EXPRESSION_BOOL("3 <= 2*3", true);
+	TEST_EXPRESSION_BOOL("6 <= 2*3", true);
+	TEST_EXPRESSION_BOOL("10/2 <= 5", true);
+	TEST_EXPRESSION_BOOL("10/2 <= 2", true);
+	TEST_EXPRESSION_BOOL("20/2 <= NumA", true);
+	TEST_EXPRESSION_BOOL("10/2 <= NumA", true);
+	TEST_EXPRESSION_BOOL("NumA <= 2*3", true);
+	TEST_EXPRESSION_BOOL("NumA <= 2*3", true);
+
+	TEST_EXPRESSION_BOOL("NumA <= 3", false);
+	TEST_EXPRESSION_BOOL("6 <= NumA", false);
+	TEST_EXPRESSION_BOOL("5 <= 5", false);
+	TEST_EXPRESSION_BOOL("10 <= 2*3", false);
+	TEST_EXPRESSION_BOOL("10/2 <= 1", false);
+	TEST_EXPRESSION_BOOL("100/2 <= NumA", false);
+	TEST_EXPRESSION_BOOL("NumA <= 1+3", false);
+	
+	TEST_EXPRESSION_BOOL("NumA > 3", true);
+	TEST_EXPRESSION_BOOL("5 > NumA", true);
+	TEST_EXPRESSION_BOOL("5 > 5", true);
+	TEST_EXPRESSION_BOOL("10 > 2*3", true);
+	TEST_EXPRESSION_BOOL("10/2 > 1", true);
+	TEST_EXPRESSION_BOOL("100/2 > NumA", true);
+	TEST_EXPRESSION_BOOL("NumA > 1+3", true);
+
+	TEST_EXPRESSION_BOOL("NumA > 7", false);
+	TEST_EXPRESSION_BOOL("3 > NumA", false);
+	TEST_EXPRESSION_BOOL("3 > 5", false);
+	TEST_EXPRESSION_BOOL("3 > 2*3", false);
+	TEST_EXPRESSION_BOOL("10/2 > 5", false);
+	TEST_EXPRESSION_BOOL("10/2 > NumA", false);
+	TEST_EXPRESSION_BOOL("NumA > 2*3", false);
+
+	TEST_EXPRESSION_BOOL("NumA >= 3", true);
+	TEST_EXPRESSION_BOOL("NumA >= 5", true);
+	TEST_EXPRESSION_BOOL("10 >= NumA", true);
+	TEST_EXPRESSION_BOOL("5 >= NumA", true);
+	TEST_EXPRESSION_BOOL("10 >= 5", true);
+	TEST_EXPRESSION_BOOL("5 >= 5", true);
+	TEST_EXPRESSION_BOOL("10 >= 2*3", true);
+	TEST_EXPRESSION_BOOL("6 >= 2*3", true);
+	TEST_EXPRESSION_BOOL("10/2 >= 1", true);
+	TEST_EXPRESSION_BOOL("10/2 >= 5", true);
+	TEST_EXPRESSION_BOOL("20/2 >= NumA", true);
+	TEST_EXPRESSION_BOOL("10/2 >= NumA", true);
+	TEST_EXPRESSION_BOOL("NumA >= 1+3", true);
+	TEST_EXPRESSION_BOOL("NumA >= 2+3", true);
+
+	TEST_EXPRESSION_BOOL("NumA >= 7", false);
+	TEST_EXPRESSION_BOOL("3 >= NumA", false);
+	TEST_EXPRESSION_BOOL("3 >= 5", false);
+	TEST_EXPRESSION_BOOL("3 >= 2*3", false);
+	TEST_EXPRESSION_BOOL("10/2 >= 5", false);
+	TEST_EXPRESSION_BOOL("10/2 >= NumA", false);
+	TEST_EXPRESSION_BOOL("NumA >= 2*3", false);
+
+	// Name equality
+
+	TEST_EXPRESSION_BOOL("NameC == 'C'", true);
+	TEST_EXPRESSION_BOOL("NameC == 'A'", false);
+	TEST_EXPRESSION_BOOL("NameC != 'C'", false);
+
+	TEST_EXPRESSION_BOOL("'C' == NameC", true);
+	TEST_EXPRESSION_BOOL("'A' == NameC", false);
+	TEST_EXPRESSION_BOOL("'C' != NameC", false);
+
+	TEST_EXPRESSION_BOOL("NameC == NameC2", true);
+	TEST_EXPRESSION_BOOL("NameC == NameD", false);
+	TEST_EXPRESSION_BOOL("NameC != NameC2", false);
+
+	// Bool equality
+
+	TEST_EXPRESSION_BOOL("(NumA == 5) == (NumB < 0)", true);
+	TEST_EXPRESSION_BOOL("(NumA == 5) != (NumB < 0)", false);
+	TEST_EXPRESSION_BOOL("(NumA == 5) == (NumB > 0)", false);
+	TEST_EXPRESSION_BOOL("(NumA == 5) != (NumB > 0)", true);
+	
+	
+	// Logical operators
+	
+	TEST_EXPRESSION_BOOL("1<2 && 3>2", true);
+	TEST_EXPRESSION_BOOL("1>2 && 3>2", false);
+	TEST_EXPRESSION_BOOL("1<2 && 3<2", false);
+	TEST_EXPRESSION_BOOL("1>2 && 3<2", false);
+
+	TEST_EXPRESSION_BOOL("NumA==5 && 3>2", true);
+	TEST_EXPRESSION_BOOL("NumA==5 && 3<2", false);
+	TEST_EXPRESSION_BOOL("NumA==6 && 3>2", false);
+	TEST_EXPRESSION_BOOL("NumA==6 && 3<2", false);
+
+	TEST_EXPRESSION_BOOL("NumA==5 && NumB<0", true);
+	TEST_EXPRESSION_BOOL("NumA!=5 && NumB<0", false);
+	TEST_EXPRESSION_BOOL("NumA==5 && NumB>0", false);
+	
+	TEST_EXPRESSION_BOOL("1<2 || 3>2", true);
+	TEST_EXPRESSION_BOOL("1<2 || 3<2", true);
+	TEST_EXPRESSION_BOOL("1>2 || 3>2", true);
+	TEST_EXPRESSION_BOOL("1>2 || 3<2", false);
+
+	TEST_EXPRESSION_BOOL("NumA==5 || 3>2", true);
+	TEST_EXPRESSION_BOOL("NumA==5 || 3<2", true);
+	TEST_EXPRESSION_BOOL("NumA!=5 || 3>2", true);
+	TEST_EXPRESSION_BOOL("NumA!=5 || 3>2", false);
+
+	TEST_EXPRESSION_BOOL("3>2 || NumA==5", true);
+	TEST_EXPRESSION_BOOL("3<2 || NumA==5", true);
+	TEST_EXPRESSION_BOOL("3>2 || NumA!=5", true);
+	TEST_EXPRESSION_BOOL("3>2 || NumA!=5", false);
+
+	TEST_EXPRESSION_BOOL("NumA==5 || NumB<0", true);
+	TEST_EXPRESSION_BOOL("NumA==5 || NumB>0", true);
+	TEST_EXPRESSION_BOOL("NumA!=5 || NumB<0", true);
+	TEST_EXPRESSION_BOOL("NumA!=5 || NumB>0", false);
 }
 
 
