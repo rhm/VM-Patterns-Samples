@@ -10,14 +10,14 @@ inline VariableLayout::VariableLayout()
 
 inline bool VariableLayout::variableExists(const Name& variableName) const
 {
-	auto it = m_layout.find(variableName);
-	return it != m_layout.end();
+	auto it = layout.find(variableName);
+	return it != layout.end();
 }
 
 inline eExpType VariableLayout::getType(const Name& variableName) const
 {
-	auto it = m_layout.find(variableName);
-	if (it == m_layout.end())
+	auto it = layout.find(variableName);
+	if (it == layout.end())
 	{
 		return eExpType::UNINITIALISED;
 	}
@@ -27,8 +27,8 @@ inline eExpType VariableLayout::getType(const Name& variableName) const
 
 inline ExpressionSlotIndex VariableLayout::getIndex(const Name& variableName) const
 {
-	auto it = m_layout.find(variableName);
-	if (it == m_layout.end())
+	auto it = layout.find(variableName);
+	if (it == layout.end())
 	{
 		assert(false);
 		return 0;
@@ -115,18 +115,18 @@ inline float VariablePack::getVariableNumber(ExpressionSlotIndex slotIndex) cons
 
 inline void ExpressionErrorReporter::reset()
 {
-	m_errors.clear();
+	errors.clear();
 }
 
 inline void ExpressionErrorReporter::addError(eErrorCategory _category, eErrorCode _code, const std::string& _message)
 {
-	m_errors.emplace_back(Info{ _category, _code, _message });
+	errors.emplace_back(Info{ _category, _code, _message });
 }
 
 inline const ExpressionErrorReporter::Info& ExpressionErrorReporter::error(uint32_t errorIndex) const 
 { 
-	assert(errorIndex >= 0 && errorIndex < m_errors.size());
-	return m_errors[errorIndex]; 
+	assert(errorIndex >= 0 && errorIndex < errors.size());
+	return errors[errorIndex]; 
 }
 
 /*

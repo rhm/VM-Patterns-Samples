@@ -35,9 +35,9 @@ struct ExpressionData
 {
 	eExpType resultType;
 	ExpressionSlotIndex regCount;
-	std::vector<uint32_t> m_byteCode;
-	std::vector<float> m_const_floats;
-	std::vector<Name> m_const_names;
+	std::vector<uint32_t> byteCode;
+	std::vector<float> const_floats;
+	std::vector<Name> const_names;
 };
 
 
@@ -53,7 +53,7 @@ public:
 	};
 
 private:
-	std::unordered_map<Name, Info> m_layout;
+	std::unordered_map<Name, Info> layout;
 	ExpressionSlotIndex numberCount, nameCount;
 
 public:
@@ -131,7 +131,7 @@ public:
 	};
 
 private:
-	std::vector<Info> m_errors;
+	std::vector<Info> errors;
 
 public:
 	ExpressionErrorReporter() {}
@@ -140,7 +140,7 @@ public:
 	void reset();
 	void addError(eErrorCategory _category, eErrorCode _code, const std::string& _message);
 
-	uint32_t errorCount() const { return m_errors.size(); }
+	uint32_t errorCount() const { return errors.size(); }
 	const Info& error(uint32_t errorIndex) const;
 };
 
