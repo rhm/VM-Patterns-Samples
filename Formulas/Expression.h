@@ -104,6 +104,7 @@ enum class eErrorCategory
 	TypeCheck,
 	Identifier,
 	Math,
+	Const,
 };
 
 enum class eErrorCode
@@ -116,6 +117,7 @@ enum class eErrorCode
 	ComparisonTypeError,
 	LogicTypeError,
 	DivideByZero,
+	ConstNameExpression,
 };
 
 class ExpressionErrorReporter

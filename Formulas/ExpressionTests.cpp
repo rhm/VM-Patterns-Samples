@@ -5,6 +5,7 @@
 #include "stdafx.h"
 
 #include <sstream>
+#include <memory>
 
 #include "ExpressionTests.h"
 #include "TestRunner.h"
@@ -23,6 +24,7 @@ protected:
 
 	ExpressionData* compile(const char* expressionText, size_t line, const char* functionName, const char* fileName);
 	void trialCompile(const char* expressionText, size_t line, const char* functionName, const char* fileName);
+	void trialCompileExpectFail(const char* expressionText, size_t line, const char* functionName, const char* fileName, eErrorCode expectedErrorCode);
 	
 	virtual void setupFixture();
 };
@@ -30,7 +32,7 @@ protected:
 ExpressionData* ExpressionTestBase::compile(const char* expressionText, size_t line, const char* functionName, const char* fileName)
 {
 	ExpressionCompiler comp(&layout);
-	ExpressionData *expData = comp.compile(expressionText);
+	std::unique_ptr<ExpressionData> expData(comp.compile(expressionText));
 
 	if (comp.errors().errorCount() > 0) 
 	{
@@ -39,17 +41,29 @@ ExpressionData* ExpressionTestBase::compile(const char* expressionText, size_t l
 		genericFail(msg.str().c_str(), line, functionName, fileName);
 	}
 
-	return expData;
+	return expData.release();
 }
 
 void ExpressionTestBase::trialCompile(const char* expressionText, size_t line, const char* functionName, const char* fileName)
 {
-	ExpressionData* expData = compile(expressionText, line, functionName, fileName);
-	if (expData != nullptr)
+	std::unique_ptr<ExpressionData> expData(compile(expressionText, line, functionName, fileName));
+}
+
+void ExpressionTestBase::trialCompileExpectFail(const char* expressionText, size_t line, const char* functionName, const char* fileName, eErrorCode expectedErrorCode)
+{
+	ExpressionCompiler comp(&layout);
+	std::unique_ptr<ExpressionData> expData(comp.compile(expressionText));
+	
+	if (comp.errors().errorCount() == 0) 
 	{
-		delete expData;
+		genericFail("Compile expected error, none reported", line, functionName, fileName);
+	}
+	else if (comp.errors().error(0).code != expectedErrorCode)
+	{
+		genericFail("Compile expected one error but got another", line, functionName, fileName);
 	}
 }
+
 
 void ExpressionTestBase::setupFixture()
 {
@@ -107,6 +121,7 @@ class ExecutionTests : public ExpressionTestBase
 protected:
 	void executeNumber(const char* expressionText, size_t line, const char* functionName, const char* fileName, float expectedValue);
 	void executeBool(const char* expressionText, size_t line, const char* functionName, const char* fileName, bool expectedValue);
+	void executeExpectError(const char* expressionText, size_t line, const char* functionName, const char* fileName, eErrorCode expectedErrorCode);
 
 	virtual void setupFixture();
 	virtual void test();
@@ -135,12 +150,11 @@ void ExecutionTests::tearDownFixture()
 
 void ExecutionTests::executeNumber(const char* expressionText, size_t line, const char* functionName, const char* fileName, float expectedValue)
 {
-	ExpressionData* expData = compile(expressionText, line, functionName, fileName);
+	std::unique_ptr<ExpressionData> expData(compile(expressionText, line, functionName, fileName));
 	if (didFail()) return;
 
 	ExpressionEvaluator eval(vars);
-	eval.evaluate(expData);
-	delete expData;
+	eval.evaluate(expData.get());
 
 	if (eval.errors().errorCount() > 0)
 	{
@@ -167,12 +181,11 @@ void ExecutionTests::executeNumber(const char* expressionText, size_t line, cons
 
 void ExecutionTests::executeBool(const char* expressionText, size_t line, const char* functionName, const char* fileName, bool expectedValue)
 {
-	ExpressionData* expData = compile(expressionText, line, functionName, fileName);
+	std::unique_ptr<ExpressionData> expData(compile(expressionText, line, functionName, fileName));
 	if (didFail()) return;
 
 	ExpressionEvaluator eval(vars);
-	eval.evaluate(expData);
-	delete expData;
+	eval.evaluate(expData.get());
 
 	if (eval.errors().errorCount() > 0)
 	{
@@ -197,9 +210,44 @@ void ExecutionTests::executeBool(const char* expressionText, size_t line, const 
 	}
 }
 
+void ExecutionTests::executeExpectError(const char* expressionText, size_t line, const char* functionName, const char* fileName, eErrorCode expectedErrorCode)
+{
+	ExpressionCompiler comp(&layout);
+	std::unique_ptr<ExpressionData> expData(comp.compile(expressionText));
+		
+	if (comp.errors().errorCount() > 0) 
+	{
+		if (comp.errors().error(0).code == expectedErrorCode)
+		{
+			return;
+		}
+		else
+		{
+			genericFail("Compile expected one error but got another", line, functionName, fileName);
+			return;
+		}
+	}
+
+	ExpressionEvaluator eval(vars);
+	eval.evaluate(expData.get());
+
+	if (eval.errors().errorCount() > 0)
+	{
+		if (eval.errors().error(0).code != expectedErrorCode)
+		{
+			genericFail("Compile expected one error but got another", line, functionName, fileName);
+		}
+	}
+	else
+	{
+		genericFail("Compile expected one error but got none", line, functionName, fileName);	
+	}
+}
+
 
 #define TEST_EXPRESSION_NUM(EXP,VALUE) { executeNumber(EXP, __LINE__, __FUNCTION__, __FILE__, VALUE); if (didFail()) return; }
 #define TEST_EXPRESSION_BOOL(EXP,VALUE) { executeBool(EXP, __LINE__, __FUNCTION__, __FILE__, VALUE); if (didFail()) return; }
+#define TEST_EXPRESSION_FAILS(EXP,ERRORCODE) { executeExpectError(EXP, __LINE__, __FUNCTION__, __FILE__, ERRORCODE); if (didFail()) return; }
 
 void ExecutionTests::test()
 {
@@ -210,7 +258,7 @@ void ExecutionTests::test()
 	TEST_EXPRESSION_NUM("NumA+4.5", 9.5);
 	TEST_EXPRESSION_NUM("NumA+NumB", 2);
 
-	TEST_EXPRESSION_NUM("10-7.5-2.5", 0);
+	TEST_EXPRESSION_NUM("10-7.5-1", 1.5);
 	TEST_EXPRESSION_NUM("-4-5", -9);
 	TEST_EXPRESSION_NUM("4+-3", 1);
 	TEST_EXPRESSION_NUM("4--3", 7);
@@ -231,7 +279,7 @@ void ExecutionTests::test()
 
 	TEST_EXPRESSION_NUM("NumA/2", 2.5);
 	TEST_EXPRESSION_NUM("10/NumA", 2);
-	TEST_EXPRESSION_NUM("NumA/NumC", 5);
+	TEST_EXPRESSION_NUM("NumA/NumC", 2.5);
 	TEST_EXPRESSION_NUM("10/-2", -5);
 	TEST_EXPRESSION_NUM("-10/2", -5);
 	TEST_EXPRESSION_NUM("-10/-2", 5);
@@ -241,8 +289,8 @@ void ExecutionTests::test()
 	TEST_EXPRESSION_NUM("12 % NumA", 2);
 	TEST_EXPRESSION_NUM("NumA % NumC", 1);
 	TEST_EXPRESSION_NUM("-12 %5", -2);
-	TEST_EXPRESSION_NUM("12 % -5", -2);
-	TEST_EXPRESSION_NUM("-12%-5", 2);
+	TEST_EXPRESSION_NUM("12 % -5", 2);
+	TEST_EXPRESSION_NUM("-12%-5", -2);
 
 
 	// Numeric comparison
@@ -266,34 +314,34 @@ void ExecutionTests::test()
 	TEST_EXPRESSION_BOOL("NumB != 5", true);
 	TEST_EXPRESSION_BOOL("5!=NumB", true);
 	TEST_EXPRESSION_BOOL("5!=88", true);
-	TEST_EXPRESSION_BOOL("88 != 10/2", true);
-	TEST_EXPRESSION_BOOL("10/2 !=88", true);
-	TEST_EXPRESSION_BOOL("NumB != 10/2", true);
-	TEST_EXPRESSION_BOOL("10/2 != NumB", true);
+	TEST_EXPRESSION_BOOL("88 != 10/NumC", true);
+	TEST_EXPRESSION_BOOL("10/NumC !=88", true);
+	TEST_EXPRESSION_BOOL("NumB != 10/NumC", true);
+	TEST_EXPRESSION_BOOL("10/NumC != NumB", true);
 
 	TEST_EXPRESSION_BOOL("NumA != 5", false);
 	TEST_EXPRESSION_BOOL("5!=NumA", false);
 	TEST_EXPRESSION_BOOL("5!=5", false);
-	TEST_EXPRESSION_BOOL("5 != 10/2", false);
-	TEST_EXPRESSION_BOOL("10/2 !=5", false);
-	TEST_EXPRESSION_BOOL("NumA != 10/2", false);
-	TEST_EXPRESSION_BOOL("10/2 != NumA", false);
+	TEST_EXPRESSION_BOOL("5 != 10/NumC", false);
+	TEST_EXPRESSION_BOOL("10/NumC !=5", false);
+	TEST_EXPRESSION_BOOL("NumA != 10/NumC", false);
+	TEST_EXPRESSION_BOOL("10/NumC != NumA", false);
 
 	TEST_EXPRESSION_BOOL("NumA < 7", true);
 	TEST_EXPRESSION_BOOL("3 < NumA", true);
 	TEST_EXPRESSION_BOOL("3 < 5", true);
-	TEST_EXPRESSION_BOOL("3 < 2*3", true);
-	TEST_EXPRESSION_BOOL("20/2 < 5", true);
-	TEST_EXPRESSION_BOOL("20/2 < NumA", true);
-	TEST_EXPRESSION_BOOL("NumA < 2*3", true);
+	TEST_EXPRESSION_BOOL("3 < NumC*3", true);
+	TEST_EXPRESSION_BOOL("20/NumA < 5", true);
+	TEST_EXPRESSION_BOOL("20/NumA < NumA", true);
+	TEST_EXPRESSION_BOOL("NumA < NumC*3", true);
 
 	TEST_EXPRESSION_BOOL("NumA < 3", false);
 	TEST_EXPRESSION_BOOL("5 < NumA", false);
 	TEST_EXPRESSION_BOOL("5 < 5", false);
-	TEST_EXPRESSION_BOOL("10 < 2*3", false);
-	TEST_EXPRESSION_BOOL("20/2 < 1", false);
-	TEST_EXPRESSION_BOOL("20/2 < NumA", false);
-	TEST_EXPRESSION_BOOL("NumA < 1+3", false);
+	TEST_EXPRESSION_BOOL("10 < NumC*3", false);
+	TEST_EXPRESSION_BOOL("20/NumC < 1", false);
+	TEST_EXPRESSION_BOOL("20/NumC < NumA", false);
+	TEST_EXPRESSION_BOOL("NumA < 1+NumC", false);
 
 	TEST_EXPRESSION_BOOL("NumA <= 7", true);
 	TEST_EXPRESSION_BOOL("NumA <= 5", true);
@@ -301,38 +349,38 @@ void ExecutionTests::test()
 	TEST_EXPRESSION_BOOL("5 <= NumA", true);
 	TEST_EXPRESSION_BOOL("3 <= 5", true);
 	TEST_EXPRESSION_BOOL("5 <= 5", true);
-	TEST_EXPRESSION_BOOL("3 <= 2*3", true);
-	TEST_EXPRESSION_BOOL("6 <= 2*3", true);
-	TEST_EXPRESSION_BOOL("10/2 <= 5", true);
-	TEST_EXPRESSION_BOOL("10/2 <= 2", true);
-	TEST_EXPRESSION_BOOL("20/2 <= NumA", true);
-	TEST_EXPRESSION_BOOL("10/2 <= NumA", true);
-	TEST_EXPRESSION_BOOL("NumA <= 2*3", true);
-	TEST_EXPRESSION_BOOL("NumA <= 2*3", true);
+	TEST_EXPRESSION_BOOL("3 <= NumC*3", true);
+	TEST_EXPRESSION_BOOL("6 <= NumC*3", true);
+	TEST_EXPRESSION_BOOL("10/NumC <= 10", true);
+	TEST_EXPRESSION_BOOL("10/NumC <= 5", true);
+	TEST_EXPRESSION_BOOL("20/NumA <= NumA", true);
+	TEST_EXPRESSION_BOOL("10/NumC <= NumA", true);
+	TEST_EXPRESSION_BOOL("NumA <= NumC*3", true);
+	TEST_EXPRESSION_BOOL("NumA <= NumC+3", true);
 
 	TEST_EXPRESSION_BOOL("NumA <= 3", false);
 	TEST_EXPRESSION_BOOL("6 <= NumA", false);
-	TEST_EXPRESSION_BOOL("5 <= 5", false);
-	TEST_EXPRESSION_BOOL("10 <= 2*3", false);
-	TEST_EXPRESSION_BOOL("10/2 <= 1", false);
-	TEST_EXPRESSION_BOOL("100/2 <= NumA", false);
-	TEST_EXPRESSION_BOOL("NumA <= 1+3", false);
+	TEST_EXPRESSION_BOOL("10 <= 5", false);
+	TEST_EXPRESSION_BOOL("10 <= NumC*3", false);
+	TEST_EXPRESSION_BOOL("10/NumC <= 1", false);
+	TEST_EXPRESSION_BOOL("100/NumC <= NumA", false);
+	TEST_EXPRESSION_BOOL("NumA <= 1+NumC", false);
 	
 	TEST_EXPRESSION_BOOL("NumA > 3", true);
-	TEST_EXPRESSION_BOOL("5 > NumA", true);
-	TEST_EXPRESSION_BOOL("5 > 5", true);
-	TEST_EXPRESSION_BOOL("10 > 2*3", true);
-	TEST_EXPRESSION_BOOL("10/2 > 1", true);
-	TEST_EXPRESSION_BOOL("100/2 > NumA", true);
-	TEST_EXPRESSION_BOOL("NumA > 1+3", true);
+	TEST_EXPRESSION_BOOL("10 > NumA", true);
+	TEST_EXPRESSION_BOOL("10 > 5", true);
+	TEST_EXPRESSION_BOOL("10 > NumC*3", true);
+	TEST_EXPRESSION_BOOL("10/NumC > 1", true);
+	TEST_EXPRESSION_BOOL("100/NumC > NumA", true);
+	TEST_EXPRESSION_BOOL("NumA > 1+NumC", true);
 
 	TEST_EXPRESSION_BOOL("NumA > 7", false);
 	TEST_EXPRESSION_BOOL("3 > NumA", false);
 	TEST_EXPRESSION_BOOL("3 > 5", false);
-	TEST_EXPRESSION_BOOL("3 > 2*3", false);
-	TEST_EXPRESSION_BOOL("10/2 > 5", false);
-	TEST_EXPRESSION_BOOL("10/2 > NumA", false);
-	TEST_EXPRESSION_BOOL("NumA > 2*3", false);
+	TEST_EXPRESSION_BOOL("3 > NumC*3", false);
+	TEST_EXPRESSION_BOOL("10/NumC > 5", false);
+	TEST_EXPRESSION_BOOL("10/NumC > NumA", false);
+	TEST_EXPRESSION_BOOL("NumA > NumC*3", false);
 
 	TEST_EXPRESSION_BOOL("NumA >= 3", true);
 	TEST_EXPRESSION_BOOL("NumA >= 5", true);
@@ -340,22 +388,20 @@ void ExecutionTests::test()
 	TEST_EXPRESSION_BOOL("5 >= NumA", true);
 	TEST_EXPRESSION_BOOL("10 >= 5", true);
 	TEST_EXPRESSION_BOOL("5 >= 5", true);
-	TEST_EXPRESSION_BOOL("10 >= 2*3", true);
-	TEST_EXPRESSION_BOOL("6 >= 2*3", true);
-	TEST_EXPRESSION_BOOL("10/2 >= 1", true);
-	TEST_EXPRESSION_BOOL("10/2 >= 5", true);
-	TEST_EXPRESSION_BOOL("20/2 >= NumA", true);
-	TEST_EXPRESSION_BOOL("10/2 >= NumA", true);
-	TEST_EXPRESSION_BOOL("NumA >= 1+3", true);
-	TEST_EXPRESSION_BOOL("NumA >= 2+3", true);
+	TEST_EXPRESSION_BOOL("10 >= NumC*3", true);
+	TEST_EXPRESSION_BOOL("6 >= NumC*3", true);
+	TEST_EXPRESSION_BOOL("10/NumC >= 1", true);
+	TEST_EXPRESSION_BOOL("10/NumC >= 5", true);
+	TEST_EXPRESSION_BOOL("20/NumC >= NumA", true);
+	TEST_EXPRESSION_BOOL("10/NumC >= NumA", true);
+	TEST_EXPRESSION_BOOL("NumA >= 1+NumC", true);
+	TEST_EXPRESSION_BOOL("NumA >= NumC+3", true);
 
 	TEST_EXPRESSION_BOOL("NumA >= 7", false);
 	TEST_EXPRESSION_BOOL("3 >= NumA", false);
 	TEST_EXPRESSION_BOOL("3 >= 5", false);
-	TEST_EXPRESSION_BOOL("3 >= 2*3", false);
-	TEST_EXPRESSION_BOOL("10/2 >= 5", false);
-	TEST_EXPRESSION_BOOL("10/2 >= NumA", false);
-	TEST_EXPRESSION_BOOL("NumA >= 2*3", false);
+	TEST_EXPRESSION_BOOL("3 >= NumC*3", false);
+	TEST_EXPRESSION_BOOL("NumA >= NumC*3", false);
 
 	// Name equality
 
@@ -403,17 +449,26 @@ void ExecutionTests::test()
 	TEST_EXPRESSION_BOOL("NumA==5 || 3>2", true);
 	TEST_EXPRESSION_BOOL("NumA==5 || 3<2", true);
 	TEST_EXPRESSION_BOOL("NumA!=5 || 3>2", true);
-	TEST_EXPRESSION_BOOL("NumA!=5 || 3>2", false);
+	TEST_EXPRESSION_BOOL("NumA!=5 || 3<2", false);
 
 	TEST_EXPRESSION_BOOL("3>2 || NumA==5", true);
 	TEST_EXPRESSION_BOOL("3<2 || NumA==5", true);
 	TEST_EXPRESSION_BOOL("3>2 || NumA!=5", true);
-	TEST_EXPRESSION_BOOL("3>2 || NumA!=5", false);
+	TEST_EXPRESSION_BOOL("3<2 || NumA!=5", false);
 
 	TEST_EXPRESSION_BOOL("NumA==5 || NumB<0", true);
 	TEST_EXPRESSION_BOOL("NumA==5 || NumB>0", true);
 	TEST_EXPRESSION_BOOL("NumA!=5 || NumB<0", true);
 	TEST_EXPRESSION_BOOL("NumA!=5 || NumB>0", false);
+
+
+	// Tests error reporting
+
+	TEST_EXPRESSION_FAILS("'A'", eErrorCode::ConstNameExpression);
+	TEST_EXPRESSION_FAILS("NameC", eErrorCode::ConstNameExpression);
+
+	TEST_EXPRESSION_FAILS("5/0", eErrorCode::DivideByZero);
+	TEST_EXPRESSION_FAILS("NumA/(NumA-5)", eErrorCode::DivideByZero);
 }
 
 

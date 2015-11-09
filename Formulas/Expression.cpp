@@ -111,7 +111,10 @@ enum class eSimpleOp : uint8_t
 	NUM_LT,
 	NUM_GT,
 	NUM_LTEQ,
-	NUM_GTEQ
+	NUM_GTEQ,
+
+	NUM_VAL,
+	BOOL_VAL
 };
 
 #if USE_OPCODE_BIT_ENCODING
@@ -211,6 +214,10 @@ enum class eEncOpcode : uint16_t
 	NUM_GTEQ_LV		= OPCODE(eSimpleOp::NUM_GTEQ,LEFT_VAR_BITS,  RIGHT_REG_BITS),
 	NUM_GTEQ_LV_RV	= OPCODE(eSimpleOp::NUM_GTEQ,LEFT_VAR_BITS,  RIGHT_VAR_BITS),
 	NUM_GTEQ_LV_RC	= OPCODE(eSimpleOp::NUM_GTEQ,LEFT_VAR_BITS,  RIGHT_CONST_BITS),
+
+	// Value operations (for const expressions)
+	NUM_VAL_LC		= OPCODE(eSimpleOp::NUM_VAL, LEFT_CONST_BITS,RIGHT_CONST_BITS),
+	BOOL_VAL_LC     = OPCODE(eSimpleOp::BOOL_VAL,LEFT_CONST_BITS,RIGHT_CONST_BITS),
 
 	OPCODE_MAX
 };
@@ -683,6 +690,12 @@ bool ASTNodeLogic::constFoldThisNode(ASTNode **parentPointerToThis, ExpressionEr
 
 void ASTNodeLogic::generateCode(ExpressionDataWriter& writer)
 {
+	m_leftChild->generateCode(writer);
+	if (m_rightChild)
+	{
+		m_rightChild->generateCode(writer);
+	}
+
 	ResultInfo leftRI = m_leftChild->getResultInfo();
 	ResultInfo rightRI = m_rightChild ? m_rightChild->getResultInfo() : leftRI;
 
@@ -830,6 +843,12 @@ bool ASTNodeComp::constFoldThisNode(ASTNode **parentPointerToThis, ExpressionErr
 
 void ASTNodeComp::generateCode(ExpressionDataWriter& writer)
 {
+	m_leftChild->generateCode(writer);
+	if (m_rightChild)
+	{
+		m_rightChild->generateCode(writer);
+	}
+
 	ResultInfo leftRI = m_leftChild->getResultInfo();
 	ResultInfo rightRI = m_rightChild ? m_rightChild->getResultInfo() : leftRI;
 
@@ -868,6 +887,11 @@ void ASTNodeComp::generateCode(ExpressionDataWriter& writer)
 	}
 	else if (m_leftChild->exprType() == eExpType::NAME)
 	{
+		if (rightRI.source == eResultSource::Constant)
+		{
+			std::swap(leftRI, rightRI);
+		}
+
 		switch (nodeType())
 		{
 		case eASTNodeType::COMP_EQ:		simpleOp = eSimpleOp::NAME_EQ;  break;
@@ -965,6 +989,12 @@ bool ASTNodeArith::constFoldThisNode(ASTNode **parentPointerToThis, ExpressionEr
 
 void ASTNodeArith::generateCode(ExpressionDataWriter& writer)
 {
+	m_leftChild->generateCode(writer);
+	if (m_rightChild)
+	{
+		m_rightChild->generateCode(writer);
+	}
+
 	ResultInfo leftRI = m_leftChild->getResultInfo();
 	ResultInfo rightRI = m_rightChild ? m_rightChild->getResultInfo() : leftRI;
 
@@ -1268,15 +1298,23 @@ void ExpressionEvaluator::evaluate(const ExpressionData* exprData)
 		{
 		case eEncOpcode::ADD:			result = GET_LEFT_REG + GET_RIGHT_REG; break;
 		case eEncOpcode::ADD_LC:		result = GET_LEFT_NUM_CONST + GET_RIGHT_REG; break;
+		case eEncOpcode::ADD_LV:		result = GET_LEFT_NUM_VAR + GET_RIGHT_REG; break;
+		case eEncOpcode::ADD_LV_RV:		result = GET_LEFT_NUM_VAR + GET_RIGHT_NUM_VAR; break;
 		case eEncOpcode::ADD_LC_RV:		result = GET_LEFT_NUM_CONST + GET_RIGHT_NUM_VAR; break;
 
 		case eEncOpcode::SUB:			result = GET_LEFT_REG - GET_RIGHT_REG; break;
 		case eEncOpcode::SUB_LC:		result = GET_LEFT_NUM_CONST - GET_RIGHT_REG; break;
 		case eEncOpcode::SUB_LV:		result = GET_LEFT_NUM_VAR - GET_RIGHT_REG; break;
+		case eEncOpcode::SUB_RC:		result = GET_LEFT_REG - GET_RIGHT_NUM_CONST; break;
+		case eEncOpcode::SUB_RV:		result = GET_LEFT_REG - GET_RIGHT_NUM_VAR; break;
 		case eEncOpcode::SUB_LC_RV:		result = GET_LEFT_NUM_CONST - GET_RIGHT_NUM_VAR; break;
+		case eEncOpcode::SUB_LV_RC:		result = GET_LEFT_NUM_VAR - GET_RIGHT_NUM_CONST; break;
+		case eEncOpcode::SUB_LV_RV:		result = GET_LEFT_NUM_VAR - GET_RIGHT_NUM_VAR; break;
 
 		case eEncOpcode::MUL:			result = GET_LEFT_REG * GET_RIGHT_REG; break;
 		case eEncOpcode::MUL_LC:		result = GET_LEFT_NUM_CONST * GET_RIGHT_REG; break;
+		case eEncOpcode::MUL_LV:		result = GET_LEFT_NUM_VAR * GET_RIGHT_REG; break;
+		case eEncOpcode::MUL_LV_RV:		result = GET_LEFT_NUM_VAR * GET_RIGHT_NUM_VAR; break;
 		case eEncOpcode::MUL_LC_RV:		result = GET_LEFT_NUM_CONST * GET_RIGHT_NUM_VAR; break;
 
 		case eEncOpcode::DIV:
@@ -1297,11 +1335,37 @@ void ExpressionEvaluator::evaluate(const ExpressionData* exprData)
 				if (right == 0.f) { logDivideByZeroError(); return; }
 				result = GET_LEFT_NUM_VAR / right; break;
 			}
-		case eEncOpcode::DIV_LC_RV:		result = GET_LEFT_NUM_CONST / GET_RIGHT_NUM_VAR; break;
+
+		case eEncOpcode::DIV_RC:
+			{
+				const float right = GET_RIGHT_NUM_CONST;
+				if (right == 0.f) { logDivideByZeroError(); return; }
+				result = GET_LEFT_REG / right; break;
+			}
+		case eEncOpcode::DIV_RV:
+			{
+				const float right = GET_RIGHT_NUM_VAR;
+				if (right == 0.f) { logDivideByZeroError(); return; }
+				result = GET_LEFT_REG / right; break;
+			}
+
+		case eEncOpcode::DIV_LC_RV:
 			{
 				const float right = GET_RIGHT_NUM_VAR;
 				if (right == 0.f) { logDivideByZeroError(); return; }
 				result = GET_LEFT_NUM_CONST / right; break;
+			}
+		case eEncOpcode::DIV_LV_RC:
+			{
+				const float right = GET_RIGHT_NUM_CONST;
+				if (right == 0.f) { logDivideByZeroError(); return; }
+				result = GET_LEFT_NUM_VAR / right; break;
+			}
+		case eEncOpcode::DIV_LV_RV:
+			{
+				const float right = GET_RIGHT_NUM_VAR;
+				if (right == 0.f) { logDivideByZeroError(); return; }
+				result = GET_LEFT_NUM_VAR / right; break;
 			}
 
 		case eEncOpcode::MOD:
@@ -1322,11 +1386,35 @@ void ExpressionEvaluator::evaluate(const ExpressionData* exprData)
 				if (right == 0.f) { logDivideByZeroError(); return; }
 				result = fmodf(GET_LEFT_NUM_VAR, right); break;
 			}
+		case eEncOpcode::MOD_RC:
+			{
+				const float right = GET_RIGHT_NUM_CONST;
+				if (right == 0.f) { logDivideByZeroError(); return; }
+				result = fmodf(GET_LEFT_REG, right); break;
+			}
+		case eEncOpcode::MOD_RV:
+			{
+				const float right = GET_RIGHT_NUM_VAR;
+				if (right == 0.f) { logDivideByZeroError(); return; }
+				result = fmodf(GET_LEFT_REG, right); break;
+			}
 		case eEncOpcode::MOD_LC_RV:
 			{
 				const float right = GET_RIGHT_NUM_VAR;
 				if (right == 0.f) { logDivideByZeroError(); return; }
 				result = fmodf(GET_LEFT_NUM_CONST, right); break;
+			}
+		case eEncOpcode::MOD_LV_RC:
+			{
+				const float right = GET_RIGHT_NUM_CONST;
+				if (right == 0.f) { logDivideByZeroError(); return; }
+				result = fmodf(GET_LEFT_NUM_VAR, right); break;
+			}
+		case eEncOpcode::MOD_LV_RV:
+			{
+				const float right = GET_RIGHT_NUM_VAR;
+				if (right == 0.f) { logDivideByZeroError(); return; }
+				result = fmodf(GET_LEFT_NUM_VAR, right); break;
 			}
 
 		// Logic (Boolean)
@@ -1380,6 +1468,10 @@ void ExpressionEvaluator::evaluate(const ExpressionData* exprData)
 		case eEncOpcode::NUM_GTEQ_LV:		result = GET_LEFT_NUM_VAR   >= GET_RIGHT_REG ? 1.f : 0.f; break;
 		case eEncOpcode::NUM_GTEQ_LV_RV:	result = GET_LEFT_NUM_VAR   >= GET_RIGHT_NUM_VAR ? 1.f : 0.f; break;
 		case eEncOpcode::NUM_GTEQ_LV_RC:	result = GET_LEFT_NUM_VAR   >= GET_RIGHT_NUM_CONST ? 1.f : 0.f; break;
+
+		// value operations (for const expressions)
+		case eEncOpcode::NUM_VAL_LC:		result = GET_LEFT_NUM_CONST; break;
+		case eEncOpcode::BOOL_VAL_LC:		result = leftOp > 0 ? 1.f : 0.f; break;
 
 		default:
 			assert(false);
@@ -1452,7 +1544,7 @@ ExpressionData* ExpressionCompiler::compile(const char* expressionText)
 		!expression->constFold(&expression, errorReport))
 	{
 		freeNode(expression);
-		return false;
+		return nullptr;
 	}
 
 	ExpressionDataWriter expWriter;
@@ -1460,7 +1552,38 @@ ExpressionData* ExpressionCompiler::compile(const char* expressionText)
 	expression->gatherConsts(expWriter);
 	uint32_t maxRegister(0);
 	expression->allocateRegisters(0, maxRegister);
-	expression->generateCode(expWriter);
+
+	// generate code
+	if (expression->exprType() == eExpType::NAME)
+	{
+		errorReport.addError(eErrorCategory::Const, eErrorCode::ConstNameExpression, "Expressions that evalute to a Name type are not supported");
+		freeNode(expression);
+		return nullptr;
+	}
+	else if (expression->isConstant())
+	{
+		if (expression->exprType() == eExpType::BOOL)
+		{
+			bool val = static_cast<ASTNodeConstBool*>(expression)->value();
+			// we don't have a separate boolean consts array (why bother when there are only two possible values?) so encode as the slot number instead
+			expWriter.emitInstr(encodeOp(eSimpleOp::BOOL_VAL, eResultSource::Constant, eResultSource::Constant), 0, val ? 1 : 0 , 0);
+		}
+		else if (expression->exprType() == eExpType::NUMBER)
+		{
+			ASTNodeConstNumber *numNode = static_cast<ASTNodeConstNumber*>(expression);
+			assert(numNode->getResultInfo().source == eResultSource::Constant);
+			expWriter.emitInstr(encodeOp(eSimpleOp::NUM_VAL, eResultSource::Constant, eResultSource::Constant), 0, numNode->getResultInfo().index, 0);
+		}
+		else
+		{
+			assert(false);
+			return nullptr;
+		}
+	}
+	else
+	{
+		expression->generateCode(expWriter);
+	}
 
 	// get generated program data and add remaining params
 	ExpressionData *expData = expWriter.getData();

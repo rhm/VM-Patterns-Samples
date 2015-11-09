@@ -817,7 +817,7 @@ YY_RULE_SETUP
 case 5:
 YY_RULE_SETUP
 #line 33 "FormulaLexer.l"
-{ yylval->n_value = copyString(yytext+1, yyleng-1); return TOKEN_NAME; }
+{ yylval->n_value = copyString(yytext+1, yyleng-2); return TOKEN_NAME; }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
