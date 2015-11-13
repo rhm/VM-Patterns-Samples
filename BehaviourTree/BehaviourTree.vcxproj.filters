@@ -1,0 +1,98 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Source Files\GeneratedFiles">
+      <UniqueIdentifier>{80626503-ed69-4cf0-b144-607628427b18}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="stdafx.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GeneratedFiles\FormulaLexer.h">
+      <Filter>Source Files\GeneratedFiles</Filter>
+    </ClInclude>
+    <ClInclude Include="GeneratedFiles\FormulaParser.h">
+      <Filter>Source Files\GeneratedFiles</Filter>
+    </ClInclude>
+    <ClInclude Include="Expression.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AST.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Name.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TestRunner.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ExpressionTests.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BehaviourTreeOO.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BTErrorReporter.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BehaviourTreeOOTests.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\FormulaLexer.c">
+      <Filter>Source Files\GeneratedFiles</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\FormulaParser.c">
+      <Filter>Source Files\GeneratedFiles</Filter>
+    </ClCompile>
+    <ClCompile Include="Expression.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Name.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TestRunner.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ExpressionTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BehaviourTreeOO.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BTErrorReporter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BehaviourTreeOOTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="FormulaLexer.l">
+      <Filter>Source Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="FormulaParser.y">
+      <Filter>Source Files</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Expression.inl">
+      <Filter>Source Files</Filter>
+    </None>
+  </ItemGroup>
+</Project>
