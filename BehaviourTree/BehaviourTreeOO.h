@@ -108,6 +108,7 @@ namespace BehaviourTreeOO
 	public:
 		BTBehaviourNode(const char* nodeName, BTBehaviourSpec* behaviourSpec);
 
+		virtual void compileExpressions(BTEvalContext& context) override;
 		virtual void evaluate(BTEvalContext& context) const override;
 
 		const BTBehaviourSpec* getBehaviourSpec() const { return behaviourSpec.get(); }
@@ -145,16 +146,17 @@ namespace BehaviourTreeOO
 	{
 	public:
 		// will be called once before execute() is called
-		virtual void init(const BTBehaviourNode* originNode, BTBehaviourContext& context) = 0;
+		virtual void init(const BTBehaviourNode* originNode, BTBehaviourContext& context) {};
 		// called on each BT evaulation where the behaviour is executing, including the first
 		virtual eBTResult execute(BTBehaviourContext& context) = 0;
 		// called to clean up a behaviour that has stopped or is being interrupted
-		virtual void cleanUp(BTBehaviourContext& context) = 0;
+		virtual void cleanUp(BTBehaviourContext& context) {};
 	};
 
 	class BTBehaviourSpec
 	{
 	public:
+		virtual void compileExpressions(BTBehaviourContext& context) {};
 		virtual BTBehaviourExec* getNewExec(const BTBehaviourNode* originNode, BTBehaviourContext& context) const = 0;
 	};
 
@@ -174,6 +176,8 @@ namespace BehaviourTreeOO
 			, treeRoot(root)
 		{}
 
+		void compileExpressions(BTEvalContext& context);
+
 		const BTNode* getTreeRoot() const { return treeRoot.get(); }
 		const VariableLayout* getVariableLayout() const { return variableLayout; }
 	};
@@ -187,11 +191,11 @@ namespace BehaviourTreeOO
 	{
 		BTErrorReporter errorReporter;
 
-		const BTTreeRuntimeData* rtData;
+		BTTreeRuntimeData* rtData;
 		BTEvalContext* evalContext;
 
 	public:
-		BTEvalEngine(const BTTreeRuntimeData* _rtData, BTWorldData* worldData, VariablePack* vars);
+		BTEvalEngine(BTTreeRuntimeData* _rtData, BTWorldData* worldData, VariablePack* vars);
 
 		void evaluate();
 

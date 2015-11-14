@@ -59,3 +59,6 @@ public:
 
 #define ENSURE(COND) {if(!ensure((COND), #COND, __LINE__, __FUNCTION__, __FILE__)) return;}
 #define TEST_CHECK(FUNC_CALL) { FUNC_CALL; if(didFail()) return; }
+#define GENERIC_FAIL(MSG) genericFail(MSG, __LINE__, __FUNCTION__, __FILE__);
+
+#define SUB_TEST(TEST) { TEST(); if (didFail()) return; }

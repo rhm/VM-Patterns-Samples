@@ -18,16 +18,16 @@ Formalas
 	* Code gen - done
 * Compiler class - done
 * Evaluation engine - done
-* Test suite
+* Test suite - done
 
 
 Naive Behaviour tree
 --------------------
-
+not doing atm.
 
 Efficient Behaviour tree
 ------------------------
-
+done
 
 Bytecode behaviour tree
 -----------------------

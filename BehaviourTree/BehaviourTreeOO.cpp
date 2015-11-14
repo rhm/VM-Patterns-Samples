@@ -54,16 +54,27 @@ namespace BehaviourTreeOO
 	}
 
 
+	/* 
+	 * BTTreeRuntimeData
+	 */
+
+	void BTTreeRuntimeData::compileExpressions(BTEvalContext& context)
+	{
+		treeRoot->compileExpressions(context);
+	}
+
+
 	/*
 	 * BTEvalEngine
 	 */
 
-	BTEvalEngine::BTEvalEngine(const BTTreeRuntimeData* _rtData, BTWorldData* worldData, VariablePack* vars)
+	BTEvalEngine::BTEvalEngine(BTTreeRuntimeData* _rtData, BTWorldData* worldData, VariablePack* vars)
 		: rtData(_rtData)
 	{
 		assert(rtData);
-
 		evalContext = new BTEvalContext(&errorReporter, worldData, vars);
+
+		rtData->compileExpressions(*evalContext);
 	}
 
 	void BTEvalEngine::evaluate()
@@ -160,7 +171,14 @@ namespace BehaviourTreeOO
 	BTBehaviourNode::BTBehaviourNode(const char* nodeName, BTBehaviourSpec* _behaviourSpec)
 		: BTLeafNode(nodeName)
 		, behaviourSpec(_behaviourSpec)
-	{}
+	{
+		assert(behaviourSpec != nullptr);
+	}
+
+	void BTBehaviourNode::compileExpressions(BTEvalContext& context)
+	{
+		behaviourSpec->compileExpressions(context);
+	}
 
 	void BTBehaviourNode::evaluate(BTEvalContext& context) const
 	{

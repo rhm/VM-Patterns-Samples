@@ -35,7 +35,30 @@ namespace BehaviourTreeOO
 		{
 			entries.emplace_back(name, num);
 		}
+
+		BTWorldDataTest() {}
+		BTWorldDataTest(std::initializer_list<Entry> _entries)
+			: entries(_entries)
+		{}
+
+		static bool compare(const BTWorldDataTest& lhs, const BTWorldDataTest& rhs);
 	};
+
+	bool BTWorldDataTest::compare(const BTWorldDataTest& reference, const BTWorldDataTest& generated)
+	{
+		if (reference.entries.size() > generated.entries.size()) return false;
+
+		for (size_t i = 0; i <  reference.entries.size(); ++i)
+		{
+			if (reference.entries[i].name != generated.entries[i].name ||
+				reference.entries[i].num  != generated.entries[i].num)
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
 
 
 	class BTBehaviourTestExec : public BTBehaviourExec
@@ -49,9 +72,7 @@ namespace BehaviourTreeOO
 			, currCount(initialCount)
 		{}
 
-		virtual void init(const BTBehaviourNode* originNode, BTBehaviourContext& context) override;
 		virtual eBTResult execute(BTBehaviourContext& context) override;
-		virtual void cleanUp(BTBehaviourContext& context) override;
 	};
 
 	class BTBehaviourTestSpec : public BTBehaviourSpec
@@ -66,26 +87,16 @@ namespace BehaviourTreeOO
 		virtual BTBehaviourExec* getNewExec(const BTBehaviourNode* originNode, BTBehaviourContext& context) const override;
 	};
 
-	void BTBehaviourTestExec::init(const BTBehaviourNode* originNode, BTBehaviourContext& context)
-	{
-		// do nothing
-	}
-
 	eBTResult BTBehaviourTestExec::execute(BTBehaviourContext& context)
 	{
 		static_cast<BTWorldDataTest*>(context.worldData)->log(Name(name), currCount);
 
-		std::cout << "Behaviour=" << name << "; Count" << currCount;
+		std::cout << "Behaviour = " << name << "; Count = " << currCount << std::endl;
 		--currCount;
 
 		return (currCount > 0) ? eBTResult::InProgress : eBTResult::Success;
 	}
 
-	void BTBehaviourTestExec::cleanUp(BTBehaviourContext& context)
-	{
-		// do nothing
-	}
-	
 
 	BTBehaviourExec* BTBehaviourTestSpec::getNewExec(const BTBehaviourNode* originNode, BTBehaviourContext& context) const
 	{
@@ -101,34 +112,120 @@ namespace BehaviourTreeOO
 	{
 	protected:
 		VariableLayout layout;
+		VariablePack *vars;
 
 		virtual void setupFixture();
 		virtual void test();
+
+		void testSequence1();
+		void testSelector1();
 	};
-
-
+	
 	void BehaviourTreeOOTest::setupFixture()
 	{
-		layout.addVariable(Name("NumA"), eExpType::NUMBER);
-		layout.addVariable(Name("NumB"), eExpType::NUMBER);
-		layout.addVariable(Name("NumC"), eExpType::NUMBER);
+		layout.addVariable(Name("branch"), eExpType::NUMBER);
 
-		layout.addVariable(Name("NameC"), eExpType::NAME);
-		layout.addVariable(Name("NameC2"), eExpType::NAME);
-		layout.addVariable(Name("NameD"), eExpType::NAME);
+		vars = new VariablePack(&layout, Name(), 0);
 	}
 
 	void BehaviourTreeOOTest::test()
 	{
-
-
-
+		SUB_TEST(testSequence1)
+		SUB_TEST(testSelector1)
 	}
 
+	void BehaviourTreeOOTest::testSequence1()
+	{
+		BTTreeRuntimeData bt(
+			vars->getLayout(), 
+			new BTSequenceNode("root-seq",
+				{
+					new BTBehaviourNode("count1", new BTBehaviourTestSpec(1)),
+					new BTBehaviourNode("count2", new BTBehaviourTestSpec(2)),
+					new BTBehaviourNode("count3", new BTBehaviourTestSpec(3))
+				}
+			));
+		
+		BTWorldDataTest sampleData({
+			{ Name("count1"), 1 },
+			{ Name("count2"), 2 },
+			{ Name("count2"), 1 },
+			{ Name("count3"), 3 },
+			{ Name("count3"), 2 },
+			{ Name("count3"), 1 }
+		});
+		BTWorldDataTest generatedTestData;
 
+		BTEvalEngine eval(&bt, &generatedTestData, vars);
+		if (eval.errors().errorCount() > 0)
+		{
+			GENERIC_FAIL("Compile error")
+		}
 
+		for (int i = 0; i < 4; ++i)
+		{
+			eval.evaluate();
+		}
 
+		if (!BTWorldDataTest::compare(sampleData, generatedTestData))
+		{
+			GENERIC_FAIL("Incorrect output")
+		}
+	}
 
+	void BehaviourTreeOOTest::testSelector1()
+	{
+		BTTreeRuntimeData bt(
+			vars->getLayout(), 
+			new BTSelectorNode("root-sel",
+				{
+					new BTSequenceNode("seq1", {
+						new BTConditionNode("cond1", "branch == 1"),
+						new BTBehaviourNode("count1", new BTBehaviourTestSpec(1)),
+					}),
+					new BTSequenceNode("seq2", {
+						new BTConditionNode("cond2", "branch == 2"),
+						new BTBehaviourNode("count2", new BTBehaviourTestSpec(2)),
+					}),
+					new BTSequenceNode("seq3", {
+						new BTConditionNode("cond3", "branch == 3"),
+						new BTBehaviourNode("count3", new BTBehaviourTestSpec(3)),
+					}),
+				}
+			));
+		
+		BTWorldDataTest sampleData({
+			{ Name("count2"), 2 },
+			{ Name("count1"), 1 },
+			{ Name("count2"), 2 },
+			{ Name("count2"), 1 },
+			{ Name("count2"), 2 },
+		});
+		BTWorldDataTest generatedTestData;
+
+		BTEvalEngine eval(&bt, &generatedTestData, vars);
+		if (eval.errors().errorCount() > 0)
+		{
+			GENERIC_FAIL("Compile error")
+		}
+
+		vars->setVariable(Name("branch"), 0.f);
+		eval.evaluate(); // nothing should be generated
+		vars->setVariable(Name("branch"), 2.f);
+		eval.evaluate();
+		vars->setVariable(Name("branch"), 1.f);
+		eval.evaluate();
+		vars->setVariable(Name("branch"), 2.f);
+		eval.evaluate();
+		eval.evaluate();
+		eval.evaluate();
+
+		if (!BTWorldDataTest::compare(sampleData, generatedTestData))
+		{
+			GENERIC_FAIL("Incorrect output")
+		}	
+	}
+	
 
 	/*
 	 * TestRunner
