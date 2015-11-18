@@ -43,7 +43,10 @@
     <ClInclude Include="BTErrorReporter.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="BehaviourTreeOOTests.h">
+    <ClInclude Include="BehaviourTreeVM.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BehaviourTreeTests.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -79,6 +82,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="BehaviourTreeOOTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BehaviourTreeVM.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="BehaviourTreeVMTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

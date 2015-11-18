@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include "ExpressionTests.h"
-#include "BehaviourTreeOOTests.h"
+#include "BehaviourTreeTests.h"
 
  
 int main(int argc, char* argv[])
@@ -19,6 +19,9 @@ int main(int argc, char* argv[])
 
 		int behaviourTreeOOResults = runBehaviourTreeOOTests();
 		if (behaviourTreeOOResults > 0) return behaviourTreeOOResults;
+
+		int behaviourTreeVMResults = runBehaviourTreeVMTests();
+		if (behaviourTreeVMResults > 0) return behaviourTreeVMResults;
 
 		return 0;
 	}

@@ -1472,6 +1472,11 @@ void ExpressionEvaluator::logDivideByZeroError()
 	errorReport.addError(eErrorCategory::Math, eErrorCode::DivideByZero, "Divide by zero error");
 }
 
+void ExpressionEvaluator::reset()
+{
+	errorReport.reset();
+}
+
 
 /*
  * ExpressionCompiler

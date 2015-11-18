@@ -80,7 +80,8 @@
   <ItemGroup>
     <ClInclude Include="AST.h" />
     <ClInclude Include="BehaviourTreeOO.h" />
-    <ClInclude Include="BehaviourTreeOOTests.h" />
+    <ClInclude Include="BehaviourTreeTests.h" />
+    <ClInclude Include="BehaviourTreeVM.h" />
     <ClInclude Include="BTErrorReporter.h" />
     <ClInclude Include="Expression.h" />
     <ClInclude Include="ExpressionTests.h" />
@@ -94,6 +95,8 @@
   <ItemGroup>
     <ClCompile Include="BehaviourTreeOO.cpp" />
     <ClCompile Include="BehaviourTreeOOTests.cpp" />
+    <ClCompile Include="BehaviourTreeVM.cpp" />
+    <ClCompile Include="BehaviourTreeVMTests.cpp" />
     <ClCompile Include="BTErrorReporter.cpp" />
     <ClCompile Include="Expression.cpp" />
     <ClCompile Include="ExpressionTests.cpp" />

@@ -10,10 +10,10 @@
 #include "BehaviourTreeTests.h"
 #include "TestRunner.h"
 
-#include "BehaviourTreeOO.h"
+#include "BehaviourTreeVM.h"
 
 
-namespace BehaviourTreeOO
+namespace BehaviourTreeVM
 {
 	class BTWorldDataTest : public BTWorldData
 	{
@@ -63,11 +63,11 @@ namespace BehaviourTreeOO
 
 	class BTBehaviourTestExec : public BTBehaviourExec
 	{
-		const char* name;
+		Name name;
 		uint32_t currCount;
 
 	public:
-		BTBehaviourTestExec(const char* _name, uint32_t initialCount)
+		BTBehaviourTestExec(Name _name, uint32_t initialCount)
 			: name(_name)
 			, currCount(initialCount)
 		{}
@@ -84,31 +84,37 @@ namespace BehaviourTreeOO
 			: initialCount(_initialCount)
 		{}
 
-		virtual BTBehaviourExec* getNewExec(const BTBehaviourNode* originNode, BTBehaviourContext& context) const override;
+		virtual BTBehaviourSpec* duplicate() const override;
+		virtual BTBehaviourExec* getNewExec(Name originNodeName, BTBehaviourContext& context) const override;
 	};
 
 	eBTResult BTBehaviourTestExec::execute(BTBehaviourContext& context)
 	{
 		static_cast<BTWorldDataTest*>(context.worldData)->log(Name(name), currCount);
 
-		std::cout << "Behaviour = " << name << "; Count = " << currCount << std::endl;
+		std::cout << "Behaviour = " << name.c_str() << "; Count = " << currCount << std::endl;
 		--currCount;
 
 		return (currCount > 0) ? eBTResult::InProgress : eBTResult::Success;
 	}
 
 
-	BTBehaviourExec* BTBehaviourTestSpec::getNewExec(const BTBehaviourNode* originNode, BTBehaviourContext& context) const
+	BTBehaviourSpec* BTBehaviourTestSpec::duplicate() const
 	{
-		return new BTBehaviourTestExec(originNode->getNodeName(), initialCount);
+		return new BTBehaviourTestSpec(*this);
+	}
+
+	BTBehaviourExec* BTBehaviourTestSpec::getNewExec(Name originNodeName, BTBehaviourContext& context) const
+	{
+		return new BTBehaviourTestExec(originNodeName, initialCount);
 	}
 
 
 	/*
-	 * BehaviourTreeOOTests
+	 * BehaviourTreeVMTest
 	 */
 
-	class BehaviourTreeOOTest : public TestFixture
+	class BehaviourTreeVMTest : public TestFixture
 	{
 	protected:
 		VariableLayout layout;
@@ -121,23 +127,22 @@ namespace BehaviourTreeOO
 		void testSelector1();
 	};
 	
-	void BehaviourTreeOOTest::setupFixture()
+	void BehaviourTreeVMTest::setupFixture()
 	{
 		layout.addVariable(Name("branch"), eExpType::NUMBER);
 
 		vars = new VariablePack(&layout, Name(), 0);
 	}
 
-	void BehaviourTreeOOTest::test()
+	void BehaviourTreeVMTest::test()
 	{
 		SUB_TEST(testSequence1)
 		SUB_TEST(testSelector1)
 	}
 
-	void BehaviourTreeOOTest::testSequence1()
+	void BehaviourTreeVMTest::testSequence1()
 	{
-		BTTreeRuntimeData bt(
-			vars->getLayout(), 
+		std::unique_ptr<BTNode> testBT(
 			new BTSequenceNode("root-seq",
 				{
 					new BTBehaviourNode("count1", new BTBehaviourTestSpec(1)),
@@ -156,7 +161,11 @@ namespace BehaviourTreeOO
 		});
 		BTWorldDataTest generatedTestData;
 
-		BTEvalEngine eval(&bt, &generatedTestData, vars);
+		BTCompiler compiler(vars, &generatedTestData);
+		std::unique_ptr<BTRuntimeData> rtData( compiler.compile(testBT.get()) );
+
+		BTEvalEngine eval(rtData.get(), &generatedTestData, vars);
+
 		if (eval.errors().errorCount() > 0)
 		{
 			GENERIC_FAIL("Compile error")
@@ -173,10 +182,9 @@ namespace BehaviourTreeOO
 		}
 	}
 
-	void BehaviourTreeOOTest::testSelector1()
+	void BehaviourTreeVMTest::testSelector1()
 	{
-		BTTreeRuntimeData bt(
-			vars->getLayout(), 
+		std::unique_ptr<BTNode> testBT(
 			new BTSelectorNode("root-sel",
 				{
 					new BTSequenceNode("seq1", {
@@ -203,7 +211,10 @@ namespace BehaviourTreeOO
 		});
 		BTWorldDataTest generatedTestData;
 
-		BTEvalEngine eval(&bt, &generatedTestData, vars);
+		BTCompiler compiler(vars, &generatedTestData);
+		std::unique_ptr<BTRuntimeData> rtData( compiler.compile(testBT.get()) );
+
+		BTEvalEngine eval(rtData.get(), &generatedTestData, vars);
 		if (eval.errors().errorCount() > 0)
 		{
 			GENERIC_FAIL("Compile error")
@@ -231,16 +242,16 @@ namespace BehaviourTreeOO
 	 * TestRunner
 	 */
 
-	TESTRUNNER(BehaviourTreeOOTests)
-		RUN_TEST(BehaviourTreeOOTest)
+	TESTRUNNER(BehaviourTreeVMTests)
+		RUN_TEST(BehaviourTreeVMTest)
 	END_TESTRUNNER
 
-} // namespace BehaviourTreeOO
+} // namespace BehaviourTreeVM
 
 
-int runBehaviourTreeOOTests()
+int runBehaviourTreeVMTests()
 {
-	BehaviourTreeOO::BehaviourTreeOOTests tr;
+	BehaviourTreeVM::BehaviourTreeVMTests tr;
 
 	tr.runTests();
 
@@ -253,5 +264,4 @@ int runBehaviourTreeOOTests()
 		return 0;
 	}
 }
-
 

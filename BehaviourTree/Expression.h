@@ -191,6 +191,7 @@ public:
 	ExpressionEvaluator(const VariablePack* _variables);
 
 	void evaluate(const ExpressionData* exprData);
+	void reset();
 
 	const ExpressionErrorReporter& errors() const { return errorReport; }
 	eExpType getResultType() const;
