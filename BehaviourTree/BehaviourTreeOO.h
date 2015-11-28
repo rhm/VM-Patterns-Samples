@@ -157,7 +157,7 @@ namespace BehaviourTreeOO
 	{
 	public:
 		virtual void compileExpressions(BTBehaviourContext& context) {};
-		virtual BTBehaviourExec* getNewExec(const BTBehaviourNode* originNode, BTBehaviourContext& context) const = 0;
+		virtual BTBehaviourExec* getNewExec(Name originNodeName, BTBehaviourContext& context) const = 0;
 	};
 
 

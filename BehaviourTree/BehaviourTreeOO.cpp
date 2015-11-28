@@ -194,7 +194,7 @@ namespace BehaviourTreeOO
 
 			// start this behaviour
 			context.currBehaviourSpec = behaviourSpec.get();
-			context.currBehaviourExec = behaviourSpec->getNewExec(this, context);
+			context.currBehaviourExec = behaviourSpec->getNewExec(Name(getNodeName()), context);
 			assert(context.currBehaviourExec);
 			context.currBehaviourExec->init(this, context);
 		}

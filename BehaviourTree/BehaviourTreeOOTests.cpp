@@ -84,7 +84,7 @@ namespace BehaviourTreeOO
 			: initialCount(_initialCount)
 		{}
 
-		virtual BTBehaviourExec* getNewExec(const BTBehaviourNode* originNode, BTBehaviourContext& context) const override;
+		virtual BTBehaviourExec* getNewExec(Name originNodeName, BTBehaviourContext& context) const override;
 	};
 
 	eBTResult BTBehaviourTestExec::execute(BTBehaviourContext& context)
@@ -98,9 +98,9 @@ namespace BehaviourTreeOO
 	}
 
 
-	BTBehaviourExec* BTBehaviourTestSpec::getNewExec(const BTBehaviourNode* originNode, BTBehaviourContext& context) const
+	BTBehaviourExec* BTBehaviourTestSpec::getNewExec(Name originNodeName, BTBehaviourContext& context) const
 	{
-		return new BTBehaviourTestExec(originNode->getNodeName(), initialCount);
+		return new BTBehaviourTestExec(originNodeName.c_str(), initialCount);
 	}
 
 
