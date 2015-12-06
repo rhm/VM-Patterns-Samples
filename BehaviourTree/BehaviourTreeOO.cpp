@@ -199,11 +199,13 @@ namespace BehaviourTreeOO
 			context.currBehaviourExec->init(this, context);
 		}
 
+		// execute current behaviour
 		eBTResult res = context.currBehaviourExec->execute(context);
 		context.lastResult = res;
 
 		assert(res != eBTResult::Undefined);
 
+		// clean up if behaviour finished
 		if (res != eBTResult::InProgress)
 		{
 			context.currBehaviourExec->cleanUp(context);
