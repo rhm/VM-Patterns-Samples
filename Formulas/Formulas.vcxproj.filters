@@ -28,12 +28,6 @@
     <ClInclude Include="AST.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="Name.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="TestRunner.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="ExpressionTests.h">
       <Filter>Source Files</Filter>
     </ClInclude>
@@ -52,12 +46,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Name.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="TestRunner.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ExpressionTests.cpp">

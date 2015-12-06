@@ -1,5 +1,4 @@
 
-#include "stdafx.h"
 #include "Name.h"
 
 #include <unordered_set>

@@ -4,8 +4,16 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 12.0.40629.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Formulas", "Formulas\Formulas.vcxproj", "{B4D6447C-B01F-46AC-811E-2E7FD2C064DA}"
+	ProjectSection(ProjectDependencies) = postProject
+		{8874934D-FBB8-458A-B414-6BADCCCEE2AE} = {8874934D-FBB8-458A-B414-6BADCCCEE2AE}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BehaviourTree", "BehaviourTree\BehaviourTree.vcxproj", "{168ECFD3-31CC-4F6D-8C5C-370B78776A2F}"
+	ProjectSection(ProjectDependencies) = postProject
+		{8874934D-FBB8-458A-B414-6BADCCCEE2AE} = {8874934D-FBB8-458A-B414-6BADCCCEE2AE}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Common", "Common\Common.vcxproj", "{8874934D-FBB8-458A-B414-6BADCCCEE2AE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +29,10 @@ Global
 		{168ECFD3-31CC-4F6D-8C5C-370B78776A2F}.Debug|Win32.Build.0 = Debug|Win32
 		{168ECFD3-31CC-4F6D-8C5C-370B78776A2F}.Release|Win32.ActiveCfg = Release|Win32
 		{168ECFD3-31CC-4F6D-8C5C-370B78776A2F}.Release|Win32.Build.0 = Release|Win32
+		{8874934D-FBB8-458A-B414-6BADCCCEE2AE}.Debug|Win32.ActiveCfg = Debug|Win32
+		{8874934D-FBB8-458A-B414-6BADCCCEE2AE}.Debug|Win32.Build.0 = Debug|Win32
+		{8874934D-FBB8-458A-B414-6BADCCCEE2AE}.Release|Win32.ActiveCfg = Release|Win32
+		{8874934D-FBB8-458A-B414-6BADCCCEE2AE}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

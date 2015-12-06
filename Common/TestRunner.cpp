@@ -3,8 +3,6 @@
  *
  */
 
-#include "stdafx.h"
-
 #include <iostream>
 #include "TestRunner.h"
 
