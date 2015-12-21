@@ -1,6 +1,6 @@
 # VM Patterns Samples
 
-This repository contains the code that I wrote to support a talk I gave a private coders conference titled "Virtual Machines as a pattern for implementing designable gameplay systems". Yes, that is a lot title for a talk. 
+This repository contains the code that I wrote to support a talk I gave a private coders conference titled "Virtual Machines as a pattern for implementing designable gameplay systems". Yes, that is a long title for a talk. 
 
 Anyway, as promised at the talk, this repository contains a Visual Studio 2013 solution with three projects:
 
@@ -9,3 +9,13 @@ Anyway, as promised at the talk, this repository contains a Visual Studio 2013 s
 * Common contains the minimalist unit test framework I wrote as well as the Name class
 
 Note that the expression parser was built using flex/bison. The generated files are included in the reprository, but if you change any of them you will need flex and bison in your system PATH in order to rebuild. The easiest place to get these from is to install the Windows port of git, which includes a lot of popular Unix commands. You could also use cygwin.
+
+
+## Slides
+
+PDF (10MB)
+https://drive.google.com/file/d/0BzGtHnqat7PFcnkxOFNjNXdVNEU/view?usp=sharing
+
+PPT (2MB)
+https://drive.google.com/file/d/0BzGtHnqat7PFRVh6Rm4zRmlqNEU/view?usp=sharing
+
